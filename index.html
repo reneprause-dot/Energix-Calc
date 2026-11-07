@@ -35,7 +35,7 @@ details summary{cursor:pointer;font-weight:600}
 <div id="undo"><span id="undoT"></span><button onclick="undo()" style="margin:0">Rückgängig</button></div>
 <div id="lock" style="display:none;position:fixed;inset:0;z-index:99;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;padding:2rem;text-align:center"><h1 style="font-size:2rem">⚡ Energix <span>Calc</span></h1><p class="mu">App gesperrt</p><input id="lkp" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off" style="max-width:14rem;text-align:center;font-size:1.4rem" onkeydown="if(event.key=='Enter')unlock()"><div id="lke" class="up" style="min-height:1.4rem"></div><div><button onclick="unlock()">Entsperren</button><button id="lkb" class="tg" onclick="bioUnlock()" style="display:none">Face ID</button></div><button class="x" onclick="lkReset()" style="margin-top:2rem">PIN vergessen? App zurücksetzen</button></div>
 <script>
-const VER='2.4.0',BUILD=18,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
+const VER='2.4.1',BUILD=19,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
 let S={p:[],m:[],h:[],dc:[],z:100},V='home',CM=null;
 try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
 function norm(){if(!Array.isArray(S.o)||!S.o.length)S.o=[{id:'o1',n:'Eigenheim'}];if(!S.ao||(S.ao!='all'&&!S.o.find(o=>o.id==S.ao)))S.ao=S.o[0].id;S.p.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.m.forEach(x=>{if(!x.o)x.o=S.o[0].id})}
@@ -493,7 +493,11 @@ function render(){
   document.documentElement.style.fontSize=S.z+'%';
   if(S.th&&S.th!='auto')document.documentElement.setAttribute('data-th',S.th);else document.documentElement.removeAttribute('data-th');
   $('app').innerHTML=(NEWV?`<div class="c" style="border-color:var(--st)">🔄 Neue Version ${NEWV.v} (Build ${NEWV.b}) verfügbar<br><button onclick="hardReset()">Jetzt aktualisieren</button></div>`:'')+osel()+view(()=>({home,prof,meter,hist,chart,aus,set:setUI}[V]()))+`<datalist id="zl">${zn().map(n=>`<option value="${esc(n)}">`).join('')}</datalist><p class="mu" style="text-align:center">Energix Calc v${VER} · Build ${BUILD}</p>`;
+  dtApply();
   $('nav').innerHTML=[['home','🏠','Übersicht'],['prof','📝','Profile'],['meter','🔢','Zähler'],['hist','🕘','Historie'],['chart','📈','Verlauf'],['aus','👥','Auswertung'],['set','⚙️','Einstell.']].map(([k,i,l])=>`<a href="#" class="${V==k?'on':''}" onclick="go('${k}');return false">${i}<br>${l}</a>`).join('')}
+function dtKey(d,c){const sm=d.querySelector('summary');if(!sm)return null;const t=[...sm.childNodes].filter(n=>n.nodeType==3).map(n=>n.textContent).join('').trim(),k=V+'|'+t;c[k]=(c[k]||0)+1;return k+'#'+c[k]}
+function dtApply(){const c={};document.querySelectorAll('#app details').forEach(d=>{const k=dtKey(d,c);if(!k)return;d.dataset.k=k;if(S.dt&&k in S.dt)d.open=!!S.dt[k]})}
+if(document.addEventListener)document.addEventListener('toggle',e=>{const d=e.target;if(!d||d.tagName!='DETAILS'||!d.dataset||!d.dataset.k)return;S.dt=S.dt||{};const v=d.open?1:0;if(S.dt[d.dataset.k]===v)return;S.dt[d.dataset.k]=v;save()},true);
 // Icon + Manifest zur Laufzeit erzeugen (Einzeldatei-PWA)
 (function(){const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');
   x.fillStyle='#0f172a';x.fillRect(0,0,512,512);x.fillStyle='#f59e0b';x.beginPath();x.moveTo(300,60);x.lineTo(150,290);x.lineTo(250,290);x.lineTo(210,452);x.lineTo(370,210);x.lineTo(270,210);x.closePath();x.fill();
