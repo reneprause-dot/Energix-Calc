@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Energix Calc</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Energix Calc">
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--tx:#e2e8f0;--mu:#94a3b8;--st:#f59e0b;--ga:#38bdf8;--ok:#4ade80;--bad:#f87171;--bd:#334155;--wa:#2dd4bf;--in:#a78bfa}
+@media(prefers-color-scheme:light){:root{--bg:#f1f5f9;--card:#fff;--tx:#0f172a;--mu:#64748b;--bd:#cbd5e1}}
+*{box-sizing:border-box}html{font-size:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:1rem/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top) 0 calc(4.5rem + env(safe-area-inset-bottom));-webkit-text-size-adjust:100%}
+header{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1rem}
+h1{margin:0;font-size:1.4rem}h1 span{color:var(--st)}
+main{max-width:42rem;margin:0 auto;padding:0 1rem}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:1rem;padding:1rem;margin:0 0 .9rem}
+.c.s{border-left:.3rem solid var(--st)}.c.w{border-left:.3rem solid var(--wa)}.c.i{border-left:.3rem solid var(--in)}.c.i .wi{display:none}button.i{background:var(--in)}.c.g{border-left:.3rem solid var(--ga)}
+.big{font-size:2rem;font-weight:700}.mu{color:var(--mu);font-size:.85rem}
+.row{display:flex;justify-content:space-between;gap:.5rem;padding:.2rem 0}
+label{display:block;margin:.6rem 0 .15rem;font-size:.85rem;color:var(--mu)}
+input,select{width:100%;padding:.6rem;font-size:1rem;border-radius:.6rem;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+button{padding:.6rem 1rem;font-size:1rem;border:0;border-radius:.6rem;background:var(--st);color:#000;font-weight:600;margin:.4rem .3rem 0 0}
+button.w{background:var(--wa)}button.g{background:var(--ga)}button.x{background:transparent;color:var(--bad);border:1px solid var(--bd)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom)}
+nav a{flex:1;text-align:center;padding:.8rem .2rem;color:var(--mu);font-size:.72rem}
+nav a.on{color:var(--st);font-weight:700}
+.up{color:var(--bad)}.dn{color:var(--ok)}
+.sc{overflow-x:auto}@media print{nav,header,button{display:none}}
+details summary{cursor:pointer;font-weight:600}
+</style></head><body>
+<header><h1>Energix <span>Calc</span></h1><div><button class="x" onclick="zoom(-10)">A−</button><button class="x" onclick="zoom(10)">A+</button><button class="x" onclick="checkUpd()" title="Aktualisieren">⟳</button></div></header>
+<main id="app"></main>
+<nav id="nav"></nav>
+<script>
+const VER='1.8.0',BUILD=9,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten'},CL={strom:'s',gas:'g',wasser:'w',internet:'i'},RU={strom:'kWh',gas:'m³',wasser:'m³'},K='energix.v1',$=id=>document.getElementById(id);
+let S={p:[],m:[],h:[],z:100},V='home',CM=null;
+try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){alert('Speichern nicht möglich')}};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const f=(n,d=2)=>(+n||0).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+function zoom(d){S.z=Math.min(160,Math.max(70,S.z+d));save();document.documentElement.style.fontSize=S.z+'%'}
+function go(v){V=v;render();scrollTo(0,0)}
+function curAb(p){const a=S.h.filter(x=>x.t=='ab'&&x.pid==p.id).sort((x,y)=>x.d.localeCompare(y.d)).at(-1);return a?a.v:+p.cur||0}
+function rd(m){return [...m.r].sort((a,b)=>a.d.localeCompare(b.d))}
+function fac(m){if(m.t!='gas')return 1;const p=S.p.find(p=>p.mid==m.id);return +(p&&p.bw)||10}
+function calc(p){if(p.t=='internet'){const g=apAt(p,today()),cost=g*12/(+p.iv||1)-(+p.bo||0);return{kwh:0,src:'',cost,ab:cost/12,diff:null}}
+
+  const m=S.m.find(m=>m.id==p.mid);let kwh=+p.est||0,src='manuell geschätzt';
+  if(m){const r=rd(m);if(r.length>1){const days=(new Date(r.at(-1).d)-new Date(r[0].d))/864e5;
+    if(days>=30){kwh=(r.at(-1).v-r[0].v)*fac(m)/days*365;src='hochgerechnet aus Zählerständen'}}}
+  const W=p.t=='wasser',A=apAt(p,today()),cost=((W?kwh*(A+(+p.aw||0))+(+p.nw||0):kwh*A/100)+p.gp*12-(+p.bo||0))*(1+(+p.pf||0)/100);
+  return{kwh,src,cost,ab:cost/12,diff:curAb(p)?cost/12-curAb(p):null}}
+function periods(m){const r=rd(m),o=[];for(let i=1;i<r.length;i++){const d=(new Date(r[i].d)-new Date(r[i-1].d))/864e5;
+  if(d>0){const k=(r[i].v-r[i-1].v)*fac(m);o.push({d:r[i].d,k,pd:k/d})}}return o}
+const D={strom:['Strom',35,12,3000],gas:['Gas',10,10,15000],wasser:['Wasser',2.2,5,120],internet:['Fixkosten',0,0,0]};function addP(t){const d=D[t];S.p.push({id:uid(),t,n:d[0],an:'',ap:d[1],gp:d[2],bo:0,bw:10,aw:t=='wasser'?2.5:0,nw:0,est:d[3],cur:0,pf:0,mid:'',ve:'',kf:1,iv:1,za:'',zd:'',ri:0,rl:3,ic:t=='internet'?'💶':''});save();render()}
+function addM(t){S.m.push({id:uid(),t,n:'',nr:'',r:[]});save();render()}
+function upd(k,id,key,val,num){const o=S[k].find(x=>x.id==id);o[key]=num?parseFloat(String(val).replace(',','.'))||0:val;if(k=='p'&&key=='cur'&&o.cur>0)S.h.push({id:uid(),t:'ab',pid:id,d:today(),v:o.cur,n:'Profil geändert'});save();if(key=='mid'||key=='t')render()}
+function del(k,id){if(confirm('Wirklich löschen?')){S[k]=S[k].filter(x=>x.id!=id);save();render()}}
+function addR(id){const m=S.m.find(x=>x.id==id),d=$('d'+id).value,v=parseFloat($('v'+id).value.replace(',','.'));
+  if(!d||isNaN(v))return alert('Datum und Stand eingeben');if(!chk(m,d,v))return;m.r.push({d,v});save();render()}
+function delR(id,i){const m=S.m.find(x=>x.id==id);m.r=rd(m).filter((_,j)=>j!=i);save();render()}
+const inp=(l,k,o,key,type='text',num=0,extra='')=>`<label>${l}</label><input type="${type}" ${extra} value="${esc(o[key])}" onchange="upd('${k}','${o.id}','${key}',this.value,${num})">`;
+function home(){
+  if(!S.p.length)return`<div class="c">Willkommen! Lege zuerst unter <b>Profile</b> ein Strom- oder Gas-Profil an.</div>`;
+  let tot=0;const rem=payRem()+S.m.map(m=>{const r=rd(m),l=r.at(-1),dd=l?Math.floor((new Date()-new Date(l.d))/864e5):999;return dd>30?`<div class="c" style="border-color:var(--st)">⏰ ${IC[m.t]} ${esc(m.n||m.nr||'Zähler')}: ${l?'letzter Stand vor '+dd+' Tagen':'noch kein Stand'} – bitte ablesen</div>`:''}).join('')+((!S.lb||(new Date()-new Date(S.lb))/864e5>90)?'<div class="c" style="border-color:var(--st)">💾 Backup fällig – exportiere deine Daten im Tab Profile</div>':'');const h=S.p.map(p=>{const c=calc(p);tot+=c.ab;
+    return`<div class="c ${CL[p.t]}"><div class="mu">${pic(p)} ${TN[p.t]} · ${esc(p.n)} ${p.an?'· '+esc(p.an):''}${p.zl?' · 👤 '+esc(p.zl):''}</div>
+    <div class="big">${f(c.ab)} € <span class="mu">/ Monat</span></div>
+    <div class="row"><span>Jahreskosten</span><b>${f(c.cost)} €</b></div>
+    <div class="row">${p.t=='internet'?`<span>Vertragsende</span><b>${p.ve?new Date(p.ve).toLocaleDateString('de-DE'):'–'}</b>`:`<span>Jahresverbrauch</span><b>${f(c.kwh,p.t=='wasser'?1:0)} ${p.t=='wasser'?'m³':'kWh'}</b>`}</div>
+    <div class="mu">${c.src}</div>${kh(p)}${zrow(p)}
+    ${c.diff!==null?`<div class="row"><span>Aktueller Abschlag</span><b>${f(curAb(p))} €</b></div><div class="row"><span>Differenz</span><b class="${c.diff>0?'up':'dn'}">${c.diff>0?'+':''}${f(c.diff)} €/Monat</b></div><div class="row"><span>Prognose Abrechnung</span><b class="${c.diff>0?'up':'dn'}">${c.diff>0?'Nachzahlung':'Guthaben'} ca. ${f(Math.abs(c.diff*12))} €</b></div>`:''}${p.st?`<div class="mu">Abrechnung in ${Math.max(0,Math.ceil((new Date(p.st)-new Date())/864e5))} Tagen (${new Date(p.st).toLocaleDateString('de-DE')})</div>`:''}<details class="wi"><summary class="mu">Was wäre wenn?</summary><label>Neuer Preis (${p.t=='wasser'?'€/m³':'ct/kWh'})</label><input id="wa${p.id}" inputmode="decimal" oninput="wi('${p.id}')"><label>Neue Grundgebühr (€/Monat)</label><input id="wg${p.id}" inputmode="decimal" oninput="wi('${p.id}')"><div id="wr${p.id}" class="big" style="font-size:1.1rem"></div></details></div>`}).join('');
+  return rem+`<div class="c"><div class="mu">Gesamt monatlich (inkl. Fixkosten)</div><div class="big">${f(tot)} € <span class="mu">/ Monat</span></div></div>`+h}
+function prof(){return S.p.map(p=>{if(p.t=='internet')return pi(p);const ms=S.m.filter(m=>m.t==p.t);
+  return`<div class="c ${CL[p.t]}"><details ${S.p.length<3?'open':''}><summary>${pic(p)} ${esc(p.n)||'Profil'}</summary>
+  ${inp('Profilname','p',p,'n')}${inp('Anbieter','p',p,'an')}
+  ${inp(p.t=='wasser'?'Frischwasserpreis (€/m³, brutto)':'Arbeitspreis (ct/kWh, brutto)','p',p,'ap','text',1,'inputmode="decimal"')}
+  ${p.t=='wasser'?inp('Abwasserpreis (€/m³)','p',p,'aw','text',1,'inputmode="decimal"')+inp('Niederschlagswasser (€/Jahr)','p',p,'nw','text',1,'inputmode="decimal"'):''}${inp('Grundgebühr (€/Monat, brutto)','p',p,'gp','text',1,'inputmode="decimal"')}
+  ${inp('Bonus/Gutschrift (€/Jahr)','p',p,'bo','text',1,'inputmode="decimal"')}
+  ${p.t=='gas'?inp('Umrechnung m³ → kWh (Brennwert × Zustandszahl)','p',p,'bw','text',1,'inputmode="decimal"'):''}
+  ${inp('Geschätzter Jahresverbrauch ('+(p.t=='wasser'?'m³':'kWh')+') – falls keine Zählerstände','p',p,'est','text',1,'inputmode="decimal"')}
+  ${inp('Aktueller Abschlag (€/Monat)','p',p,'cur','text',1,'inputmode="decimal"')}
+  ${zf(p)}${inp('Zahler (wer zahlt?)','p',p,'zl','text',0,'list="zl"')}${inp('Nächster Abrechnungsstichtag','p',p,'st','date')}${inp('Sicherheitspuffer (%)','p',p,'pf','text',1,'inputmode="decimal"')}
+  <label>Zähler</label><select onchange="upd('p','${p.id}','mid',this.value)"><option value="">– keiner –</option>${ms.map(m=>`<option value="${m.id}" ${m.id==p.mid?'selected':''}>${esc(m.n||m.nr||'Zähler')}</option>`).join('')}</select>
+  <button class="x" onclick="del('p','${p.id}')">Profil löschen</button></details></div>`}).join('')
+  +`<button onclick="addP('strom')">+ Strom-Profil</button><button class="g" onclick="addP('gas')">+ Gas-Profil</button><button class="w" onclick="addP('wasser')">+ Wasser-Profil</button><button class="i" onclick="addP('internet')">+ Fixkosten</button>
+  <div class="c" style="margin-top:1rem"><b>Backup</b><br><button class="x" onclick="exp()">Backup (JSON)</button><button class="x" onclick="csv()">CSV</button><button class="x" onclick="print()">Drucken / PDF</button><button class="x" onclick="$('imp').click()">Importieren</button><input id="imp" type="file" accept=".json" hidden onchange="imp(this.files[0])"></div><div class="c"><b>App</b><div class="mu">Version ${VER} · Build ${BUILD}</div><button onclick="checkUpd()">Auf Updates prüfen</button><button class="x" onclick="hardReset(true)">Hard Reset</button><div class="mu" style="margin-top:.5rem">Löscht nur den App-Cache und lädt neu – deine Daten bleiben erhalten.</div><label>Gemini-API-Key (für Zählerfoto, bleibt nur auf diesem Gerät)</label><input type="password" value="${esc(S.gk)}" onchange="S.gk=this.value;save()"></div>`}
+function meter(){return S.m.map(m=>{const r=rd(m);
+  return`<div class="c ${CL[m.t]}"><details open><summary>${IC[m.t]} ${esc(m.n||m.nr||'Zähler')}</summary>
+  ${inp('Bezeichnung','m',m,'n')}${inp('Zählernummer','m',m,'nr')}
+  <label>Zählerstände (${RU[m.t]})</label>
+  ${r.map((x,i)=>`<div class="row"><span>${new Date(x.d).toLocaleDateString('de-DE')}</span><b>${f(x.v,1)}</b><button class="x" style="margin:0" onclick="edit('s','${m.id}',${i})">✎</button><button class="x" style="margin:0" onclick="delR('${m.id}',${i})">✕</button></div>`).join('')||'<div class="mu">Noch keine Stände</div>'}
+  <label>Neuer Stand</label><input type="date" id="d${m.id}" value="${today()}"><input id="v${m.id}" inputmode="decimal" placeholder="Zählerstand" style="margin-top:.4rem">
+  <button onclick="addR('${m.id}')">Stand speichern</button><button class="g" onclick="$('ph${m.id}').click()">📷 Foto</button><input type="file" id="ph${m.id}" accept="image/*" capture="environment" hidden onchange="ocr(this.files[0],'${m.id}')"><button class="x" onclick="del('m','${m.id}')">Zähler löschen</button></details></div>`}).join('')
+  +`<button onclick="addM('strom')">+ Stromzähler</button><button class="g" onclick="addM('gas')">+ Gaszähler</button><button class="w" onclick="addM('wasser')">+ Wasserzähler</button>`}
+function chart(){
+  if(!S.m.length)return`<div class="c">Lege zuerst einen Zähler mit mindestens zwei Ständen an.</div>`;
+  if(!CM||!S.m.find(m=>m.id==CM))CM=S.m[0].id;const m=S.m.find(m=>m.id==CM),P=periods(m),col=m.t=='gas'?'var(--ga)':m.t=='wasser'?'var(--wa)':'var(--st)';
+  const sel=`<select onchange="CM=this.value;render()">${S.m.map(x=>`<option value="${x.id}" ${x.id==CM?'selected':''}>${esc(x.n||x.nr||'Zähler')}</option>`).join('')}</select>`;
+  if(!P.length)return`<div class="c">${sel}<p class="mu">Mindestens zwei Zählerstände nötig.</p></div>`;
+  const WA=m.t=='wasser';if(WA)P.forEach(p=>p.pd*=1000);const mx=Math.max(...P.map(p=>p.pd))||1,W=Math.max(320,P.length*64),H=200;
+  const bars=P.map((p,i)=>{const h=p.pd/mx*140,x=i*64+12;return`<rect x="${x}" y="${170-h}" width="40" height="${h}" rx="4" fill="${col}"/><text x="${x+20}" y="${164-h}" font-size="11" text-anchor="middle" fill="currentColor">${f(p.pd,1)}</text><text x="${x+20}" y="190" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">${new Date(p.d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'})}</text>`}).join('');
+  let tr='';if(P.length>1){const a=P.at(-2).pd,b=P.at(-1).pd,ch=(b-a)/a*100;tr=`<div class="big ${ch>0?'up':'dn'}">${ch>0?'↑ steigend':'↓ sinkend'} ${f(Math.abs(ch),1)} %</div><div class="mu">Letzter Zeitraum gegenüber dem vorherigen (Ø pro Tag)</div>`}
+  const tot=P.reduce((s,p)=>s+p.k,0);
+  return`<div class="c">${sel}${tr}</div><div class="c"><b>Ø Verbrauch pro Tag (${WA?'Liter':'kWh'})</b><div class="sc"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:none">${bars}</svg></div></div>
+  ${yc(m,P)}<div class="c"><div class="row"><span>Gesamt erfasst</span><b>${f(tot,WA?1:0)} ${WA?'m³':'kWh'}</b></div><div class="row"><span>Ø pro Tag</span><b>${f(P.reduce((s,p)=>s+p.pd,0)/P.length,1)} ${WA?'Liter':'kWh'}</b></div></div>`}
+let HF={t:'z',tid:''};
+function edit(src,id,i){const o=src=='s'?rd(S.m.find(m=>m.id==id))[i]:S.h.find(h=>h.id==id);
+ const d=prompt('Datum (JJJJ-MM-TT)',o.d);if(d===null)return;const v=prompt('Wert',o.v);if(v===null)return;
+ if(/^\d{4}-\d{2}-\d{2}$/.test(d))o.d=d;const n=parseFloat(String(v).replace(',','.'));if(!isNaN(n))o.v=n;save();render()}
+function delH(id){if(confirm('Wirklich löschen?')){S.h=S.h.filter(x=>x.id!=id);save();render()}}
+function addH(){const t=HF.t,id=HF.tid,d=$('hd').value,v=parseFloat($('hv').value.replace(',','.'));
+ if(!id||!d||isNaN(v))return alert('Bitte Ziel, Datum und Wert angeben');
+ if(t=='z'){const m=S.m.find(m=>m.id==id);if(!chk(m,d,v))return;m.r.push({d,v})}else S.h.push({id:uid(),t,pid:id,d,v,n:$('hn').value});save();render()}
+function hist(){
+ const T=HF.t,o=T=='z'?S.m.map(m=>[m.id,(IC[m.t]+' ')+(m.n||m.nr||'Zähler')]):S.p.map(p=>[p.id,(pic(p)+' ')+p.n]);
+ if(!o.find(x=>x[0]==HF.tid))HF.tid=o.length?o[0][0]:'';
+ const R=[];
+ S.m.forEach(m=>rd(m).forEach((x,i)=>R.push({d:x.d,s:'s',id:m.id,i,a:`${IC[m.t]} Zählerstand · ${esc(m.n||m.nr||'Zähler')}`,b:f(x.v,1)+' '+RU[m.t]})));
+ S.h.forEach(h=>{const p=S.p.find(p=>p.id==h.pid)||{t:'strom',n:'(gelöscht)'};R.push({d:h.d,s:'h',id:h.id,a:`${pic(p)} ${{ab:'Abschlag',rg:'Jahresabrechnung',pr:p.t=='internet'?'Preis ab':'Arbeitspreis ab'}[h.t]} · ${esc(p.n)}${h.n?' · '+esc(h.n):''}`,b:f(h.v)+({ab:' €/Monat',rg:' €',pr:p.t=='wasser'?' €/m³':p.t=='internet'?' €':' ct/kWh'}[h.t])})});
+ R.sort((a,b)=>b.d.localeCompare(a.d));
+ const sel=v=>T==v?'selected':'';
+ return`<div class="c"><b>Eintrag hinzufügen / nachtragen</b>
+ <label>Art</label><select onchange="HF.t=this.value;render()"><option value="z" ${sel('z')}>Zählerstand</option><option value="ab" ${sel('ab')}>Abschlag (€/Monat)</option><option value="rg" ${sel('rg')}>Jahresabrechnung (+ Nachzahlung / − Guthaben, €)</option><option value="pr" ${sel('pr')}>Preisänderung (Arbeits-/Monatspreis, gültig ab)</option></select>
+ <label>${T=='z'?'Zähler':'Profil'}</label><select onchange="HF.tid=this.value">${o.map(x=>`<option value="${x[0]}" ${x[0]==HF.tid?'selected':''}>${x[1]}</option>`).join('')}</select>
+ <label>Datum (auch in der Vergangenheit)</label><input type="date" id="hd" value="${today()}"><label>Wert</label><input id="hv" inputmode="decimal">
+ ${T=='z'?'':'<label>Notiz</label><input id="hn">'}<button onclick="addH()">Speichern</button></div>
+ <div class="c"><b>Historie (${R.length})</b>${R.map(r=>`<div class="row" style="align-items:center;border-top:1px solid var(--bd);margin-top:.4rem;padding-top:.4rem"><span>${new Date(r.d).toLocaleDateString('de-DE')}<br><span class="mu">${r.a}</span></span><span style="text-align:right"><b>${r.b}</b><br><button class="x" style="margin:.2rem .2rem 0 0" onclick="edit('${r.s}','${r.id}',${r.i||0})">✎</button><button class="x" style="margin:.2rem 0 0" onclick="${r.s=='s'?`delR('${r.id}',${r.i})`:`delH('${r.id}')`}">✕</button></span></div>`).join('')||'<div class="mu">Noch keine Einträge</div>'}</div>`}
+function apAt(p,d){return p.fx?p.ap:(S.h.filter(x=>x.t=='pr'&&x.pid==p.id&&x.d<=d).sort((a,b)=>a.d.localeCompare(b.d)).at(-1)||{v:p.t=='internet'?p.gp:p.ap}).v}
+function up(p,d){const a=apAt(p,d);return p.t=='wasser'?a+(+p.aw||0):a/100}
+function wi(id){const p=S.p.find(x=>x.id==id),a=parseFloat($('wa'+id).value.replace(',','.')),g=parseFloat($('wg'+id).value.replace(',','.')),o=$('wr'+id);
+ if(isNaN(a)||isNaN(g)){o.textContent='';return}const c=calc(p),n=calc({...p,ap:a,gp:g,fx:1}),d=c.cost-n.cost;
+ o.innerHTML=`Neu: ${f(n.cost)} €/Jahr<br><span class="${d>0?'dn':'up'}">${d>0?'Ersparnis':'Mehrkosten'} ${f(Math.abs(d))} €/Jahr</span>`}
+function chk(m,d,v){const l=rd(m).filter(x=>x.d<d).at(-1);if(!l)return true;
+ if(v<l.v)return confirm('Der Stand ist niedriger als der vorherige ('+f(l.v,1)+'). Trotzdem speichern?');
+ const P=periods(m),days=(new Date(d)-new Date(l.d))/864e5,avg=P.length?P.reduce((s,p)=>s+p.pd,0)/P.length:0;
+ return !(avg&&days>0&&(v-l.v)*fac(m)/days>avg*3)||confirm('Der Verbrauch seit dem letzten Stand ist über 3× so hoch wie üblich. Trotzdem speichern?')}
+function yc(m,P){const pf=S.p.find(p=>p.mid==m.id),Y={};P.forEach(p=>{const y=p.d.slice(0,4);Y[y]=Y[y]||{k:0,c:0};Y[y].k+=p.k;Y[y].c+=pf?p.k*up(pf,p.d):0});
+ const ys=Object.keys(Y).sort(),u=m.t=='wasser'?'m³':'kWh';
+ return`<div class="c"><b>Jahresvergleich</b>${ys.map((y,i)=>{const pv=Y[ys[i-1]],ch=pv&&pv.k?(Y[y].k-pv.k)/pv.k*100:null;return`<div class="row"><span>${y}</span><span>${f(Y[y].k,0)} ${u}${pf?' · '+f(Y[y].c,0)+' €':''}${ch===null?'':` <span class="${ch>0?'up':'dn'}">${ch>0?'↑':'↓'}${f(Math.abs(ch),0)} %</span>`}</span></div>`}).join('')}<div class="mu">Aus Zählerstands-Differenzen, dem Jahr des späteren Stands zugeordnet</div></div>`}
+function csv(){const L=[];S.m.forEach(m=>m.r.forEach(x=>L.push([x.d,'Zählerstand '+RU[m.t],m.n||m.nr,String(x.v).replace('.',','),''])));
+ S.h.forEach(h=>{const p=S.p.find(p=>p.id==h.pid)||{n:''};L.push([h.d,{ab:'Abschlag',rg:'Jahresabrechnung',pr:'Arbeitspreis'}[h.t],p.n,String(h.v).replace('.',','),h.n||''])});
+ L.sort((a,b)=>b[0].localeCompare(a[0]));const t='\ufeff'+[['Datum','Art','Objekt','Wert','Notiz'],...L].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));a.download='energix.csv';a.click();S.lb=today();save();render()}
+async function ocr(file,id){if(!file)return;if(!S.gk)return alert('Bitte zuerst im Tab Profile einen Gemini-API-Key eintragen.');
+ const b=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.readAsDataURL(file)});
+ try{const x=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GM+':generateContent?key='+S.gk,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:'Lies den Zählerstand dieses Zählers ab. Antworte nur mit der Zahl mit Dezimalpunkt, ohne Einheit.'},{inline_data:{mime_type:file.type||'image/jpeg',data:b}}]}]})});
+  const j=await x.json(),v=parseFloat(j.candidates[0].content.parts[0].text.replace(',','.'));if(isNaN(v))throw 0;$('v'+id).value=v;alert('Erkannt: '+v+' – bitte prüfen und speichern.')}catch(e){alert('Auslesen fehlgeschlagen.')}}
+function pic(p){return p.ic||IC[p.t]}
+function pi(p){const iv=+p.iv||1;return`<div class="c i"><details open><summary>${pic(p)} ${esc(p.n)||'Fixkosten'}</summary>${inp('Bezeichnung (z. B. Internet, Hausrat, Müll)','p',p,'n')}${inp('Symbol (Emoji)','p',p,'ic')}${inp('Anbieter / Versicherer','p',p,'an')}${inp('Betrag pro Zahlung (€)','p',p,'gp','text',1,'inputmode="decimal"')}<label>Zahlweise</label><select onchange="upd('p','${p.id}','iv',this.value,1)">${[[1,'monatlich'],[3,'vierteljährlich'],[6,'halbjährlich'],[12,'jährlich']].map(x=>`<option value="${x[0]}" ${x[0]==iv?'selected':''}>${x[1]}</option>`).join('')}</select>${inp('Bonus/Gutschrift (€/Jahr)','p',p,'bo','text',1,'inputmode="decimal"')}${inp('Vertragsende','p',p,'ve','date')}${inp('Kündigungsfrist (Monate)','p',p,'kf','text',1,'inputmode="decimal"')}${inp('Zahler (wer zahlt?)','p',p,'zl','text',0,'list="zl"')}${zf(p)}<button class="x" onclick="del('p','${p.id}')">Profil löschen</button></details></div>`}
+function kh(p){if(p.t!='internet'||!p.ve)return'';const e=new Date(p.ve);e.setMonth(e.getMonth()-(+p.kf||0));const d=Math.ceil((e-new Date())/864e5);
+ return d<0?'<div class="mu up">Kündigungsfrist abgelaufen – Vertrag verlängert sich ggf.</div>':`<div class="mu ${d<=60?'up':''}">Kündigen bis ${e.toLocaleDateString('de-DE')} (in ${d} Tagen)</div>`}
+function zn(){return[...new Set(S.p.map(p=>(p.zl||'').trim()).filter(Boolean))]}
+function aus(){if(!S.p.length)return'<div class="c">Noch keine Profile.</div>';
+ const G={};S.p.forEach(p=>{const c=calc(p),k=(p.zl||'').trim()||'Nicht zugeordnet';G[k]=G[k]||{m:0,l:[]};G[k].m+=c.ab;G[k].l.push({p,m:c.ab})});
+ const ks=Object.keys(G).sort((a,b)=>G[b].m-G[a].m),T=ks.reduce((s,k)=>s+G[k].m,0)||1;
+ const e1=`<div class="c"><b>Auswertung 1 – Kosten je Zahler</b>${ks.map(k=>`<div style="margin-top:.7rem"><div class="row"><span>👤 ${esc(k)}</span><b>${f(G[k].m)} €/Monat</b></div><div class="mu">${f(G[k].m*12)} €/Jahr · ${f(G[k].m/T*100,0)} %</div><div style="height:.5rem;border-radius:.3rem;background:var(--bd)"><div style="height:100%;width:${Math.max(0,G[k].m/T*100)}%;border-radius:.3rem;background:var(--st)"></div></div></div>`).join('')}<div class="row" style="margin-top:.8rem"><span>Gesamt</span><b>${f(T)} €/Monat</b></div></div>`;
+ const e2=`<div class="c"><b>Auswertung 2 – Aufschlüsselung je Zahler</b>${ks.map(k=>`<div style="margin-top:.8rem"><b>👤 ${esc(k)}</b>${G[k].l.map(x=>`<div class="row"><span>${pic(x.p)} ${esc(x.p.n)}</span><span>${f(x.m)} €/Monat · ${f(x.m*12,0)} €/Jahr</span></div>`).join('')}</div>`).join('')}<div class="mu" style="margin-top:.6rem">Basis: berechnete Abschläge bzw. Monatsanteile der Profile</div></div>`;
+ return e1+e2}
+function add(b,m){const d=new Date(b);d.setMonth(d.getMonth()+m);return d}
+function nd(p){if(!p.zd)return null;const iv=+p.ri||0,b=new Date(p.zd+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);let d=b,k=0;
+ if(!iv)return d<t?null:d;while(d<t&&k<1200)d=add(b,++k*iv);return d}
+function zrow(p){const d=nd(p);return p.za||d?`<div class="mu">💶 ${p.za?esc(p.za):''}${d?(p.za?' · ':'')+'nächste Zahlung '+d.toLocaleDateString('de-DE'):''}</div>`:''}
+function zf(p){const O=(a,v)=>a.map(x=>`<option value="${x[0]}" ${x[0]==v?'selected':''}>${x[1]}</option>`).join('');
+ return inp('Zahlungsart','p',p,'za','text',0,'list="za"')+inp('Nächste Zahlung / Fälligkeit','p',p,'zd','date')+`<label>Erinnerung</label><select onchange="upd('p','${p.id}','ri',this.value,1)">${O([[0,'aus'],[1,'monatlich'],[3,'vierteljährlich'],[6,'halbjährlich'],[12,'jährlich']],+p.ri||0)}</select>`+inp('Vorlauf (Tage vorher erinnern)','p',p,'rl','text',1,'inputmode="numeric"')+`<button class="x" onclick="ics('${p.id}')">📅 In Kalender eintragen</button>`}
+function payRem(){const t=new Date();t.setHours(0,0,0,0);return S.p.filter(p=>+p.ri).map(p=>{const d=nd(p);if(!d)return'';const n=Math.round((d-t)/864e5);if(n>(p.rl===undefined||p.rl===''?3:+p.rl))return'';
+ const a=p.t=='internet'?apAt(p,today()):(curAb(p)||calc(p).ab)*(+p.ri||1);
+ return`<div class="c" style="border-color:var(--st)">💶 ${pic(p)} ${esc(p.n)}: Zahlung ${n<=0?'heute fällig':'in '+n+' Tagen'} (${d.toLocaleDateString('de-DE')}) · ${f(a)} €${p.za?' · '+esc(p.za):''}</div>`}).join('')}
+function ics(id){const p=S.p.find(x=>x.id==id);if(!p.zd)return alert('Bitte zuerst das Datum der nächsten Zahlung eintragen.');
+ const d=nd(p)||new Date(p.zd+'T00:00:00'),iv=+p.ri||0,z=n=>String(n).padStart(2,'0'),ds=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate()),
+ sm=('Zahlung '+p.n+(p.zl?' ('+p.zl+')':'')+(p.za?' - '+p.za:'')).replace(/[,;]/g,' ');
+ const t=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Energix Calc//DE','BEGIN:VEVENT','UID:'+id+'@energix','DTSTAMP:'+new Date().toISOString().replace(/[-:]|\.\d+/g,''),'DTSTART;VALUE=DATE:'+ds,'SUMMARY:'+sm,iv?'RRULE:FREQ=MONTHLY;INTERVAL='+iv:'','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+sm,'TRIGGER:-P'+(+p.rl||0)+'D','END:VALARM','END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/calendar'}));a.download='energix-zahlung.ics';a.click()}
+let NEWV=null;
+async function remote(){const t=await(await fetch(location.pathname+'?c='+Date.now(),{cache:'no-store'})).text();return{b:+(t.match(/BUILD=(\d+)/)||[])[1],v:(t.match(/VER='([\d.]+)'/)||[])[1]}}
+async function hardReset(ask){if(ask&&!confirm('App-Cache löschen und neu laden? Deine Daten bleiben erhalten.'))return;
+ try{(await navigator.serviceWorker.getRegistrations()).forEach(x=>x.unregister());(await caches.keys()).forEach(k=>caches.delete(k))}catch(e){}
+ try{await fetch(location.pathname,{cache:'reload'})}catch(e){}
+ location.replace(location.pathname+'?r='+Date.now())}
+async function checkUpd(){try{const x=await remote();
+ if(x.b>BUILD){NEWV=x;render();if(confirm('Neue Version '+x.v+' (Build '+x.b+') verfügbar. Jetzt aktualisieren? Deine Daten bleiben erhalten.'))hardReset()}
+ else alert('Du hast die neueste Version ('+VER+', Build '+BUILD+').')}catch(e){alert('Prüfung nicht möglich (offline?).')}}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,(k,v)=>k=='gk'?undefined:v)],{type:'application/json'}));a.download='energix-backup.json';a.click();S.lb=today();save();render()}
+function imp(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{S=Object.assign({p:[],m:[],h:[],z:100},JSON.parse(r.result));save();render()}catch(e){alert('Ungültige Datei')}};r.readAsText(file)}
+function render(){
+  document.documentElement.style.fontSize=S.z+'%';
+  $('app').innerHTML=(NEWV?`<div class="c" style="border-color:var(--st)">🔄 Neue Version ${NEWV.v} (Build ${NEWV.b}) verfügbar<br><button onclick="hardReset()">Jetzt aktualisieren</button></div>`:'')+{home,prof,meter,hist,chart,aus}[V]()+`<datalist id="za"><option value="Lastschrift"><option value="Dauerauftrag"><option value="Überweisung"><option value="PayPal"><option value="Kreditkarte"><option value="Bar"></datalist><datalist id="zl">${zn().map(n=>`<option value="${esc(n)}">`).join('')}</datalist><p class="mu" style="text-align:center">Energix Calc v${VER} · Build ${BUILD}</p>`;
+  $('nav').innerHTML=[['home','🏠','Übersicht'],['prof','📝','Profile'],['meter','🔢','Zähler'],['hist','🕘','Historie'],['chart','📈','Verlauf'],['aus','👥','Auswertung']].map(([k,i,l])=>`<a href="#" class="${V==k?'on':''}" onclick="go('${k}');return false">${i}<br>${l}</a>`).join('')}
+// Icon + Manifest zur Laufzeit erzeugen (Einzeldatei-PWA)
+(function(){const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');
+  x.fillStyle='#0f172a';x.fillRect(0,0,512,512);x.fillStyle='#f59e0b';x.beginPath();x.moveTo(300,60);x.lineTo(150,290);x.lineTo(250,290);x.lineTo(210,452);x.lineTo(370,210);x.lineTo(270,210);x.closePath();x.fill();
+  const u=c.toDataURL('image/png');let l=document.createElement('link');l.rel='apple-touch-icon';l.href=u;document.head.appendChild(l);
+  const man={name:'Energix Calc',short_name:'Energix',display:'standalone',background_color:'#0f172a',theme_color:'#0f172a',start_url:location.href.split('#')[0],icons:[{src:u,sizes:'512x512',type:'image/png',purpose:'any'}]};
+  l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/json'}));document.head.appendChild(l)})();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+remote().then(x=>{if(x.b>BUILD){NEWV=x;render()}}).catch(()=>{});
+</script></body></html>
