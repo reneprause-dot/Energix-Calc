@@ -33,8 +33,8 @@ details summary{cursor:pointer;font-weight:600}
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
-const VER='1.8.0',BUILD=9,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten'},CL={strom:'s',gas:'g',wasser:'w',internet:'i'},RU={strom:'kWh',gas:'m³',wasser:'m³'},K='energix.v1',$=id=>document.getElementById(id);
-let S={p:[],m:[],h:[],z:100},V='home',CM=null;
+const VER='1.9.0',BUILD=10,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten'},CL={strom:'s',gas:'g',wasser:'w',internet:'i'},RU={strom:'kWh',gas:'m³',wasser:'m³'},K='energix.v1',$=id=>document.getElementById(id);
+let S={p:[],m:[],h:[],dc:[],z:100},V='home',CM=null;
 try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){alert('Speichern nicht möglich')}};
 const uid=()=>Math.random().toString(36).slice(2,9);
@@ -58,7 +58,7 @@ function periods(m){const r=rd(m),o=[];for(let i=1;i<r.length;i++){const d=(new 
 const D={strom:['Strom',35,12,3000],gas:['Gas',10,10,15000],wasser:['Wasser',2.2,5,120],internet:['Fixkosten',0,0,0]};function addP(t){const d=D[t];S.p.push({id:uid(),t,n:d[0],an:'',ap:d[1],gp:d[2],bo:0,bw:10,aw:t=='wasser'?2.5:0,nw:0,est:d[3],cur:0,pf:0,mid:'',ve:'',kf:1,iv:1,za:'',zd:'',ri:0,rl:3,ic:t=='internet'?'💶':''});save();render()}
 function addM(t){S.m.push({id:uid(),t,n:'',nr:'',r:[]});save();render()}
 function upd(k,id,key,val,num){const o=S[k].find(x=>x.id==id);o[key]=num?parseFloat(String(val).replace(',','.'))||0:val;if(k=='p'&&key=='cur'&&o.cur>0)S.h.push({id:uid(),t:'ab',pid:id,d:today(),v:o.cur,n:'Profil geändert'});save();if(key=='mid'||key=='t')render()}
-function del(k,id){if(confirm('Wirklich löschen?')){S[k]=S[k].filter(x=>x.id!=id);save();render()}}
+function del(k,id){if(confirm('Wirklich löschen?')){if(k=='p'){S.dc.filter(d=>d.pid==id).forEach(d=>dbx('readwrite',st=>st.delete(d.id)));S.dc=S.dc.filter(d=>d.pid!=id)}S[k]=S[k].filter(x=>x.id!=id);save();render()}}
 function addR(id){const m=S.m.find(x=>x.id==id),d=$('d'+id).value,v=parseFloat($('v'+id).value.replace(',','.'));
   if(!d||isNaN(v))return alert('Datum und Stand eingeben');if(!chk(m,d,v))return;m.r.push({d,v});save();render()}
 function delR(id,i){const m=S.m.find(x=>x.id==id);m.r=rd(m).filter((_,j)=>j!=i);save();render()}
@@ -164,7 +164,7 @@ function nd(p){if(!p.zd)return null;const iv=+p.ri||0,b=new Date(p.zd+'T00:00:00
  if(!iv)return d<t?null:d;while(d<t&&k<1200)d=add(b,++k*iv);return d}
 function zrow(p){const d=nd(p);return p.za||d?`<div class="mu">💶 ${p.za?esc(p.za):''}${d?(p.za?' · ':'')+'nächste Zahlung '+d.toLocaleDateString('de-DE'):''}</div>`:''}
 function zf(p){const O=(a,v)=>a.map(x=>`<option value="${x[0]}" ${x[0]==v?'selected':''}>${x[1]}</option>`).join('');
- return inp('Zahlungsart','p',p,'za','text',0,'list="za"')+inp('Nächste Zahlung / Fälligkeit','p',p,'zd','date')+`<label>Erinnerung</label><select onchange="upd('p','${p.id}','ri',this.value,1)">${O([[0,'aus'],[1,'monatlich'],[3,'vierteljährlich'],[6,'halbjährlich'],[12,'jährlich']],+p.ri||0)}</select>`+inp('Vorlauf (Tage vorher erinnern)','p',p,'rl','text',1,'inputmode="numeric"')+`<button class="x" onclick="ics('${p.id}')">📅 In Kalender eintragen</button>`}
+ return inp('Zahlungsart','p',p,'za','text',0,'list="za"')+inp('Nächste Zahlung / Fälligkeit','p',p,'zd','date')+`<label>Erinnerung</label><select onchange="upd('p','${p.id}','ri',this.value,1)">${O([[0,'aus'],[1,'monatlich'],[3,'vierteljährlich'],[6,'halbjährlich'],[12,'jährlich']],+p.ri||0)}</select>`+inp('Vorlauf (Tage vorher erinnern)','p',p,'rl','text',1,'inputmode="numeric"')+`<button class="x" onclick="ics('${p.id}')">📅 In Kalender eintragen</button>`+df(p)}
 function payRem(){const t=new Date();t.setHours(0,0,0,0);return S.p.filter(p=>+p.ri).map(p=>{const d=nd(p);if(!d)return'';const n=Math.round((d-t)/864e5);if(n>(p.rl===undefined||p.rl===''?3:+p.rl))return'';
  const a=p.t=='internet'?apAt(p,today()):(curAb(p)||calc(p).ab)*(+p.ri||1);
  return`<div class="c" style="border-color:var(--st)">💶 ${pic(p)} ${esc(p.n)}: Zahlung ${n<=0?'heute fällig':'in '+n+' Tagen'} (${d.toLocaleDateString('de-DE')}) · ${f(a)} €${p.za?' · '+esc(p.za):''}</div>`}).join('')}
@@ -173,6 +173,17 @@ function ics(id){const p=S.p.find(x=>x.id==id);if(!p.zd)return alert('Bitte zuer
  sm=('Zahlung '+p.n+(p.zl?' ('+p.zl+')':'')+(p.za?' - '+p.za:'')).replace(/[,;]/g,' ');
  const t=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Energix Calc//DE','BEGIN:VEVENT','UID:'+id+'@energix','DTSTAMP:'+new Date().toISOString().replace(/[-:]|\.\d+/g,''),'DTSTART;VALUE=DATE:'+ds,'SUMMARY:'+sm,iv?'RRULE:FREQ=MONTHLY;INTERVAL='+iv:'','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+sm,'TRIGGER:-P'+(+p.rl||0)+'D','END:VALARM','END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/calendar'}));a.download='energix-zahlung.ics';a.click()}
+const DB=()=>new Promise((res,rej)=>{const q=indexedDB.open('energix-docs',1);q.onupgradeneeded=()=>q.result.createObjectStore('d',{keyPath:'id'});q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+async function dbx(m,fn){const d=await DB();return new Promise((res,rej)=>{const t=d.transaction('d',m),r=fn(t.objectStore('d'));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})}
+async function addDoc(pid,files){try{for(const f of files){if(f.size>25e6){alert(f.name+' ist größer als 25 MB.');continue}
+  const id=uid(),buf=await f.arrayBuffer();await dbx('readwrite',st=>st.put({id,buf,type:f.type}));S.dc.push({id,pid,n:f.name,t:f.type,sz:f.size,d:today()})}
+  save();render()}catch(e){alert('Datei konnte nicht gespeichert werden.')}}
+async function openDoc(id,dl){const m=S.dc.find(d=>d.id==id),x=await dbx('readonly',st=>st.get(id));if(!x)return alert('Die Datei liegt nicht auf diesem Gerät.');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([x.buf],{type:x.type||m.t}));if(dl)a.download=m.n;else a.target='_blank';a.click()}
+function delDoc(id){if(confirm('Dokument löschen?')){dbx('readwrite',st=>st.delete(id));S.dc=S.dc.filter(d=>d.id!=id);save();render()}}
+function df(p){const L=S.dc.filter(d=>d.pid==p.id);
+ return`<label>📎 Vertragsunterlagen</label>${L.map(d=>`<div class="row"><span>${esc(d.n)}<br><span class="mu">${new Date(d.d).toLocaleDateString('de-DE')} · ${f(d.sz/1024,0)} KB</span></span><span><button class="x" style="margin:0 .2rem 0 0" onclick="openDoc('${d.id}')">Öffnen</button><button class="x" style="margin:0 .2rem 0 0" onclick="openDoc('${d.id}',1)">⬇</button><button class="x" style="margin:0" onclick="delDoc('${d.id}')">✕</button></span></div>`).join('')||'<div class="mu">Noch keine Unterlagen</div>'}<button class="g" onclick="$('df${p.id}').click()">+ Datei hinzufügen</button><input type="file" id="df${p.id}" multiple accept=".pdf,image/*,.doc,.docx" hidden onchange="addDoc('${p.id}',this.files)">`}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 let NEWV=null;
 async function remote(){const t=await(await fetch(location.pathname+'?c='+Date.now(),{cache:'no-store'})).text();return{b:+(t.match(/BUILD=(\d+)/)||[])[1],v:(t.match(/VER='([\d.]+)'/)||[])[1]}}
 async function hardReset(ask){if(ask&&!confirm('App-Cache löschen und neu laden? Deine Daten bleiben erhalten.'))return;
@@ -183,7 +194,7 @@ async function checkUpd(){try{const x=await remote();
  if(x.b>BUILD){NEWV=x;render();if(confirm('Neue Version '+x.v+' (Build '+x.b+') verfügbar. Jetzt aktualisieren? Deine Daten bleiben erhalten.'))hardReset()}
  else alert('Du hast die neueste Version ('+VER+', Build '+BUILD+').')}catch(e){alert('Prüfung nicht möglich (offline?).')}}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,(k,v)=>k=='gk'?undefined:v)],{type:'application/json'}));a.download='energix-backup.json';a.click();S.lb=today();save();render()}
-function imp(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{S=Object.assign({p:[],m:[],h:[],z:100},JSON.parse(r.result));save();render()}catch(e){alert('Ungültige Datei')}};r.readAsText(file)}
+function imp(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{S=Object.assign({p:[],m:[],h:[],dc:[],z:100},JSON.parse(r.result));save();render()}catch(e){alert('Ungültige Datei')}};r.readAsText(file)}
 function render(){
   document.documentElement.style.fontSize=S.z+'%';
   $('app').innerHTML=(NEWV?`<div class="c" style="border-color:var(--st)">🔄 Neue Version ${NEWV.v} (Build ${NEWV.b}) verfügbar<br><button onclick="hardReset()">Jetzt aktualisieren</button></div>`:'')+{home,prof,meter,hist,chart,aus}[V]()+`<datalist id="za"><option value="Lastschrift"><option value="Dauerauftrag"><option value="Überweisung"><option value="PayPal"><option value="Kreditkarte"><option value="Bar"></datalist><datalist id="zl">${zn().map(n=>`<option value="${esc(n)}">`).join('')}</datalist><p class="mu" style="text-align:center">Energix Calc v${VER} · Build ${BUILD}</p>`;
