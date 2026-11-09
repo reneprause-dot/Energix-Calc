@@ -23,8 +23,8 @@ input,select{width:100%;padding:.6rem;font-size:1rem;border-radius:.6rem;border:
 button{padding:.6rem 1rem;font-size:1rem;border:0;border-radius:.6rem;background:var(--st);color:#000;font-weight:600;margin:.4rem .3rem 0 0}
 button.w{background:var(--wa)}button.tg{background:transparent;color:var(--tx);border:1px solid var(--bd)}button.g{background:var(--ga)}button.x{background:transparent;color:var(--bad);border:1px solid var(--bd)}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom)}
-nav a{flex:1;text-align:center;padding:.8rem .1rem;color:var(--mu);font-size:.6rem}
-nav a.on{color:var(--st);font-weight:700}
+nav a{flex:1;text-align:center;padding:.8rem .1rem;color:var(--mu);font-size:.72rem}
+nav a.on{color:var(--st);font-weight:700}.seg{display:flex;gap:.3rem;margin-bottom:.7rem}.seg a{flex:1;text-align:center;padding:.55rem .2rem;border:1px solid var(--bd);border-radius:.7rem;color:var(--mu);font-size:.85rem}.seg a.on{background:var(--st);color:#0f172a;font-weight:700;border-color:var(--st)}.row button{min-width:44px;min-height:44px;padding:.3rem .4rem;font-size:1rem}.row{align-items:center}details.inf{margin:.15rem 0}details.inf>summary{display:inline-block;list-style:none;color:var(--mu);font-size:.85rem;font-weight:400}details.inf>summary::-webkit-details-marker{display:none}
 .up{color:var(--bad)}.dn{color:var(--ok)}
 .sc{overflow-x:auto}#rep{display:none}@media print{nav,header,button{display:none}body.rp{background:#fff!important;color:#000!important}body.rp main,body.rp nav,body.rp header,body.rp #lock{display:none!important}body.rp #rep{display:block;color:#000;background:#fff;font:11pt/1.4 system-ui,sans-serif}#rep h1{font-size:20pt}#rep table{width:100%;border-collapse:collapse;margin:.5rem 0}#rep td,#rep th{border-bottom:1px solid #999;padding:.25rem .4rem;text-align:left}#rep .r{text-align:right}#rep .s{font-size:9pt;color:#555}}
 details summary{cursor:pointer;font-weight:600}
@@ -37,7 +37,7 @@ details summary{cursor:pointer;font-weight:600}
 <script>
 const _D=Date;let TOFF=0,TS={ok:0};
 Date=class extends _D{constructor(...a){if(a.length)super(...a);else super(_D.now()+TOFF)}static now(){return _D.now()+TOFF}};
-const VER='2.7.0',BUILD=23,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
+const VER='2.8.0',BUILD=25,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
 let S={p:[],m:[],h:[],dc:[],z:100},V='home',CM=null;
 try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
 function norm(){if(!Array.isArray(S.o)||!S.o.length)S.o=[{id:'o1',n:'Eigenheim'}];if(!S.ao||(S.ao!='all'&&!S.o.find(o=>o.id==S.ao)))S.ao=S.o[0].id;S.p.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.m.forEach(x=>{if(!x.o)x.o=S.o[0].id})}
@@ -54,7 +54,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 const isoU=ms=>new Date(ms).toISOString().slice(0,10),today=()=>iso(new Date());
 function zoom(d){S.z=Math.min(160,Math.max(70,S.z+d));save();document.documentElement.style.fontSize=S.z+'%'}
-function go(v){V=v;try{history.replaceState(null,'','#'+v)}catch(e){}render();scrollTo(0,0)}
+function go(v){V=v;navMem();try{history.replaceState(null,'','#'+v)}catch(e){}render();scrollTo(0,0)}
 function curAb(p){const a=S.h.filter(x=>x.t=='ab'&&x.pid==p.id).sort((x,y)=>x.d.localeCompare(y.d)).at(-1);return a?a.v:+p.cur||0}
 function rd(m){return [...m.r].sort((a,b)=>a.d.localeCompare(b.d))}
 function fac(m){if(m.t!='gas')return 1;const p=S.p.find(p=>p.mid==m.id);return +(p&&p.bw)||10}
@@ -94,14 +94,15 @@ function home(){
   let tot=0;const wr=[];
   S.p.forEach(p=>{const c=calc(p),kk=kd(p),pw=peWarn(p);if(pw)wr.push(pw);if(kk&&!kk.missed&&kk.days<=60)wr.push(`${pic(p)} ${esc(p.n)}: Kündigung nur noch bis ${kk.ku.toLocaleDateString('de-DE')} möglich (in ${kk.days} Tagen)`);if(+p.bz>0&&c.cost>+p.bz)wr.push(`${pic(p)} ${esc(p.n)}: Prognose ${f(c.cost,0)} € liegt über dem Jahresbudget von ${f(p.bz,0)} €`);if(+p.vz>0&&p.t!='internet'&&c.kwh>+p.vz)wr.push(`${pic(p)} ${esc(p.n)}: Verbrauchsprognose ${f(c.kwh,0)} ${RU[p.t]} liegt über dem Ziel von ${f(p.vz,0)} ${RU[p.t]}`)});
   const rem=wr.map(x=>`<div class="c" style="border-color:var(--bad)">⚠️ ${x}</div>`).join('')+payRem()+S.m.map(m=>{const r=rd(m),l=r.at(-1),dd=l?Math.floor((new Date()-new Date(l.d))/864e5):999;return dd>30?`<div class="c" style="border-color:var(--st)">⏰ ${IC[m.t]} ${esc(m.n||m.nr||'Zähler')}: ${l?'letzter Stand vor '+dd+' Tagen':'noch kein Stand'} – bitte ablesen${qr(m)}</div>`:''}).join('')+((!S.lb||(new Date()-new Date(S.lb))/864e5>90)?'<div class="c" style="border-color:var(--st)">💾 Backup fällig – exportiere deine Daten im Tab Profile</div>':'');
-  const h=S.p.map(p=>{const c=calc(p),pv=p.t=='pv';tot+=c.ab;
-    return`<div class="c ${CL[p.t]}"><div class="mu">${pic(p)} ${TN[p.t]} · ${esc(p.n)} ${p.an?'· '+esc(p.an):''}${p.zl?' · 👤 '+esc(p.zl)+(p.z2?' / '+esc(p.z2):''):''}</div>
+  const hp=S.p.map(p=>{const c=calc(p),pv=p.t=='pv';tot+=c.ab;
+    return`<div class="c ${CL[p.t]}"><details><summary>${hsum(p,c)}</summary><div class="mu">${pic(p)} ${TN[p.t]} · ${esc(p.n)} ${p.an?'· '+esc(p.an):''}${p.zl?' · 👤 '+esc(p.zl)+(p.z2?' / '+esc(p.z2):''):''}</div>
     <div class="big">${pv?f(-c.ab)+' € <span class="mu">Ertrag / Monat</span>':f(c.ab)+' € <span class="mu">/ Monat</span>'}</div>
     <div class="row"><span>${pv?'Jahresertrag':'Jahreskosten'}</span><b>${f(pv?-c.cost:c.cost)} €</b></div>
     <div class="row">${p.t=='internet'?`<span>Vertragsende</span><b>${p.ve?new Date(p.ve).toLocaleDateString('de-DE'):'–'}</b>`:`<span>${pv?'Einspeisung pro Jahr':'Jahresverbrauch'}</span><b>${f(c.kwh,p.t=='wasser'?1:0)} ${p.t=='wasser'?'m³':'kWh'}</b>`}</div>
     <div class="mu">${c.src}</div>${kh(p)}${p.pe_w?`<div class="mu">📈 ${peTxt(p)}</div>`:''}${zrow(p)}${bgBlock(p,c)}${abBlock(p,c)}${p.st?`<div class="mu">Abrechnung in ${Math.max(0,Math.ceil((new Date(p.st)-new Date())/864e5))} Tagen (${new Date(p.st).toLocaleDateString('de-DE')})</div>`:''}
-    ${pv?'':`<button class="tg" onclick="pay('${p.id}')">✓ Zahlung buchen</button>`}<details class="wi"><summary class="mu">Was wäre wenn?</summary><label>Neuer Preis (${p.t=='wasser'?'€/m³':'ct/kWh'})</label><input id="wa${p.id}" inputmode="decimal" oninput="wi('${p.id}')"><label>Neue Grundgebühr (€/Monat)</label><input id="wg${p.id}" inputmode="decimal" oninput="wi('${p.id}')"><div id="wr${p.id}" class="big" style="font-size:1.1rem"></div></details></div>`}).join('');
-  return rem+autoNote()+stWarn()+bkWarn()+hausWarn()+`<div class="c"><div class="mu">Gesamt monatlich (inkl. Fixkosten, abzgl. Einspeisung)</div><div class="big">${f(tot)} € <span class="mu">/ Monat</span></div>${+S.bg>0?pb('Monatsbudget',tot,+S.bg,'€'):''}</div>`+abEmp()+ytdCard()+h+'<button class="x" onclick="go(\'quick\')">📱 Kompakt-Ansicht</button>'}
+    ${pv?'':`<button class="tg" onclick="pay('${p.id}')">✓ Zahlung buchen</button>`}<details class="wi"><summary class="mu">Was wäre wenn?</summary><label>Neuer Preis (${p.t=='wasser'?'€/m³':'ct/kWh'})</label><input id="wa${p.id}" inputmode="decimal" oninput="wi('${p.id}')"><label>Neue Grundgebühr (€/Monat)</label><input id="wg${p.id}" inputmode="decimal" oninput="wi('${p.id}')"><div id="wr${p.id}" class="big" style="font-size:1.1rem"></div></details></details></div>`});
+  const totC=`<div class="c"><div class="mu">Gesamt monatlich (inkl. Fixkosten, abzgl. Einspeisung)</div><div class="big">${f(tot)} € <span class="mu">/ Monat</span></div>${+S.bg>0?pb('Monatsbudget',tot,+S.bg,'€'):''}</div>`;
+  return qa()+rem+autoNote()+stWarn()+bkWarn()+hausWarn()+hSort([{k:'k:tot',h:totC},{k:'k:ab',h:abEmp()},{k:'k:ytd',h:ytdCard()},...S.p.map((p,i)=>({k:p.id,h:hp[i]}))])+'<button class="x" onclick="go(\'quick\')">📱 Kompakt-Ansicht</button>'}
 function pb(l,val,max,u){const q=val/max*100;return`<div class="row"><span>${l}</span><b class="${q>100?'up':''}">${f(val,0)} / ${f(max,0)} ${u}</b></div><div class="pbar"><div style="width:${Math.max(0,Math.min(100,q))}%;background:${q>100?'var(--bad)':q>85?'var(--st)':'var(--ok)'}"></div></div>`}
 function bgBlock(p,c){let h='';if(+p.bz>0)h+=pb('Jahresbudget (Prognose)',c.cost,+p.bz,'€');if(+p.vz>0&&p.t!='internet'&&p.t!='pv')h+=pb('Verbrauchsziel (Prognose/Jahr)',c.kwh,+p.vz,RU[p.t]);return h}
 function perOf(p){const t=new Date();t.setHours(0,0,0,0);let e;if(p.st){e=new Date(p.st+'T00:00:00');while(e<=t)e=add(e,12)}else e=new Date(t.getFullYear()+1,0,1);return{s:add(e,-12),e}}
@@ -606,6 +607,21 @@ async function hwTake(){const v=HWS.v,num=x=>parseFloat(String(x).replace(',','.
  try{w.bl=await putFile(HWS.f)}catch(e){}
  S.hw=S.hw||[];S.hw.push(w);S.hy=+v.d.slice(0,4);HWS={f:null,o:null,v:{}};save();render();
  alert(w.nz?'Übernommen – steuerlich nicht absetzbar ('+why.join(', ')+').':'Übernommen – absetzbar: '+f(w.ak*.2)+' € (20 % von '+f(w.ak)+' €).')}
+let HSORT=false,HKEYS=[];
+function hOrder(keys){const o=(S.ho||[]).filter(k=>keys.includes(k));keys.forEach(k=>{if(!o.includes(k))o.push(k)});return o}
+function mvH(k,d){const o=hOrder(HKEYS),i=o.indexOf(k),j=i+d;if(i<0||j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];S.ho=o.concat((S.ho||[]).filter(x=>!HKEYS.includes(x)));save();render()}
+function hSort(it){it=it.filter(x=>x.h);HKEYS=it.map(x=>x.k);const o=hOrder(HKEYS),m={};it.forEach(x=>m[x.k]=x.h);
+ const bar=k=>HSORT?`<div style="text-align:right;margin-bottom:-.3rem"><button class="x" style="margin:0 .2rem" onclick="mvH('${k}',-1)">▲</button><button class="x" style="margin:0" onclick="mvH('${k}',1)">▼</button></div>`:'';
+ return`<div style="text-align:right"><button class="x" style="margin:.2rem 0" onclick="HSORT=!HSORT;render()">${HSORT?'✓ Fertig':'↕ Reihenfolge ändern'}</button>${HSORT?'<button class="x" style="margin:.2rem 0 .2rem .4rem" onclick="S.ho=[];save();render()">Zurücksetzen</button>':''}</div>`+o.map(k=>bar(k)+m[k]).join('')}
+const NAVG=[['home','🏠','Start',['home']],['meter','🔢','Zähler',['meter']],['verl','📈','Verlauf',['hist','chart','aus']],['haus','🏡','Haus',['haus']],['mehr','⚙️','Mehr',['prof','set']]],LV={verl:'chart',mehr:'prof'},SEGN={hist:'Historie',chart:'Diagramme',aus:'Auswertung',prof:'Profile',set:'Einstellungen'};
+function navMem(){NAVG.forEach(g=>{if(g[3].length>1&&g[3].includes(V))LV[g[0]]=V})}
+function seg(){const g=NAVG.find(g=>g[3].length>1&&g[3].includes(V));return g?`<div class="seg">${g[3].map(k=>`<a href="#" class="${V==k?'on':''}" onclick="go('${k}');return false">${SEGN[k]}</a>`).join('')}</div>`:''}
+function hsum(p,c){const kk=kd(p),w=peWarn(p)||(kk&&!kk.missed&&kk.days<=60)||(+p.bz>0&&c.cost>+p.bz)||(c.diff!==null&&c.diff>=5);
+ return`${pic(p)} ${esc(p.n)||TN[p.t]}<span style="margin-left:.4rem">${w?'⚠️':'✓'}</span><span style="float:right;white-space:nowrap">${f(p.t=='pv'?-c.ab:c.ab)} €<span class="mu" style="font-weight:400"> / Monat</span></span>`}
+let HQP=0;
+function qa(){const pp=S.p.filter(p=>p.t!='pv'),op=HQP?`<div class="c"><label>Für welches Profil?</label><select id="qpp">${pp.map(p=>`<option value="${p.id}">${pic(p)} ${esc(p.n)}</option>`).join('')}</select><button onclick="HQP=0;pay($('qpp').value)">Zahlung buchen</button><button class="x" onclick="HQP=0;render()">Abbrechen</button></div>`:'';
+ return`<div style="display:flex;gap:.4rem;margin-bottom:.5rem"><button style="flex:1;margin:0;padding:.7rem .3rem" onclick="go('quick')">🔢 Ablesen</button><button class="g" style="flex:1;margin:0;padding:.7rem .3rem" onclick="${pp.length==1?`pay('${pp[0].id}')`:'HQP=1;render()'}">✓ Zahlung</button><button class="w" style="flex:1;margin:0;padding:.7rem .3rem" onclick="go('haus');$('hwsf').click()">🧾 Rechnung</button></div>`+op}
+function collapseHelp(){if(V=='home'||V=='quick')return;try{document.querySelectorAll('#app div.mu').forEach(el=>{if(el.className!=='mu'||(el.textContent||'').length<110||el.closest('.row')||el.closest('details.inf')||el.querySelector('input,button,select,a,b,.up,.dn'))return;const d=document.createElement('details'),sm=document.createElement('summary');d.className='inf';sm.textContent='ⓘ Hinweis';d.appendChild(sm);el.parentNode.insertBefore(d,el);d.appendChild(el)})}catch(e){}}
 let LOCKED=false,LKF=0,LKT=0,HID=0;
 function lkGet(){try{return JSON.parse(localStorage.getItem(LK)||'null')}catch(e){return null}}
 function secUI(){const l=lkGet();return`<div class="c"><b>🔒 App-Sperre</b><div class="mu">${l?'PIN aktiv'+(l.bio?' · Face ID/Touch ID aktiv':''):'Nicht aktiv'}. Die Sperre verdeckt die App nach 30 Sekunden im Hintergrund. Die Daten selbst sind auf dem Gerät nicht verschlüsselt, verschlüsselt wird das Backup.</div><label>${l?'Neue PIN':'PIN (4–8 Ziffern)'}</label><input id="pin1" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><label>PIN wiederholen</label><input id="pin2" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><button onclick="pinSave()">PIN speichern</button>${l?(l.bio?`<button class="tg" onclick="bioOff()">Face ID aus</button>`:`<button class="tg" onclick="bioOn()">Face ID aktivieren</button>`)+`<button class="x" onclick="pinOff()">Sperre entfernen</button>`:''}</div>`}
@@ -624,9 +640,10 @@ document.addEventListener('visibilitychange',()=>{const on=!!lkGet();if(document
 function render(){
   document.documentElement.style.fontSize=S.z+'%';
   if(S.th&&S.th!='auto')document.documentElement.setAttribute('data-th',S.th);else document.documentElement.removeAttribute('data-th');
-  $('app').innerHTML=(NEWV?`<div class="c" style="border-color:var(--st)">🔄 Neue Version ${NEWV.v} (Build ${NEWV.b}) verfügbar<br><button onclick="hardReset()">Jetzt aktualisieren</button></div>`:'')+osel()+view(()=>({home,prof,meter,hist,chart,aus,haus:hausUI,quick,set:setUI}[V]()))+`<datalist id="zl">${zn().map(n=>`<option value="${esc(n)}">`).join('')}</datalist><p class="mu" style="text-align:center">Energix Calc v${VER} · Build ${BUILD}</p>`;
+  $('app').innerHTML=(NEWV?`<div class="c" style="border-color:var(--st)">🔄 Neue Version ${NEWV.v} (Build ${NEWV.b}) verfügbar<br><button onclick="hardReset()">Jetzt aktualisieren</button></div>`:'')+seg()+osel()+view(()=>({home,prof,meter,hist,chart,aus,haus:hausUI,quick,set:setUI}[V]()))+`<datalist id="zl">${zn().map(n=>`<option value="${esc(n)}">`).join('')}</datalist><p class="mu" style="text-align:center">Energix Calc v${VER} · Build ${BUILD}</p>`;
   dtApply();loadThumbs();
-  $('nav').innerHTML=[['home','🏠','Übersicht'],['prof','📝','Profile'],['meter','🔢','Zähler'],['hist','🕘','Historie'],['chart','📈','Verlauf'],['aus','👥','Auswert.'],['haus','🏡','Haus'],['set','⚙️','Einstell.']].map(([k,i,l])=>`<a href="#" class="${V==k?'on':''}" onclick="go('${k}');return false">${i}<br>${l}</a>`).join('')}
+  collapseHelp();navMem();
+  $('nav').innerHTML=NAVG.map(([k,i,l,vs])=>`<a href="#" class="${vs.includes(V)?'on':''}" onclick="go('${vs.length>1?(LV[k]||vs[0]):vs[0]}');return false">${i}<br>${l}</a>`).join('')}
 function dtKey(d,c){const sm=d.querySelector('summary');if(!sm)return null;const t=[...sm.childNodes].filter(n=>n.nodeType==3).map(n=>n.textContent).join('').trim(),k=V+'|'+t;c[k]=(c[k]||0)+1;return k+'#'+c[k]}
 function dtApply(){const c={};document.querySelectorAll('#app details').forEach(d=>{const k=dtKey(d,c);if(!k)return;d.dataset.k=k;if(S.dt&&k in S.dt)d.open=!!S.dt[k]})}
 if(document.addEventListener)document.addEventListener('toggle',e=>{const d=e.target;if(!d||d.tagName!='DETAILS'||!d.dataset||!d.dataset.k)return;S.dt=S.dt||{};const v=d.open?1:0;if(S.dt[d.dataset.k]===v)return;S.dt[d.dataset.k]=v;save()},true);
