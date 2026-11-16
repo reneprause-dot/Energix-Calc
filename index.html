@@ -37,7 +37,7 @@ details summary{cursor:pointer;font-weight:600}
 <script>
 const _D=Date;let TOFF=0,TS={ok:0};
 Date=class extends _D{constructor(...a){if(a.length)super(...a);else super(_D.now()+TOFF)}static now(){return _D.now()+TOFF}};
-const VER='2.14.1',BUILD=32,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
+const VER='2.14.2',BUILD=33,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
 let S={p:[],m:[],h:[],dc:[],z:100},V='home',CM=null;
 try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
 function norm(){if(!Array.isArray(S.o)||!S.o.length)S.o=[{id:'o1',n:'Eigenheim'}];if(!S.ao||(S.ao!='all'&&!S.o.find(o=>o.id==S.ao)))S.ao=S.o[0].id;S.p.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.m.forEach(x=>{if(!x.o)x.o=S.o[0].id})}
@@ -367,7 +367,7 @@ function peApply(id){const p=S.p.find(x=>x.id==id);if(!p.pe_w)return alert('Bitt
 const WX='energix.wx';
 function wxGet(){try{return JSON.parse(localStorage.getItem(WX)||'{}')}catch(e){return{}}}
 let WXQ=0;async function wxLoad(oid){const O=S.o.find(x=>x.id==oid);if(!O||!O.ort)return alert('Bitte zuerst im Tab Profile beim Objekt einen Standort (PLZ oder Ort) eintragen.');
- try{if(!O.lat){const j=await(await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(O.ort)+'&count=1&language=de&countryCode=DE')).json();if(!j.results||!j.results[0])return alert('Standort nicht gefunden.');O.lat=j.results[0].latitude;O.lon=j.results[0].longitude;save()}
+ try{if(!O.lat){const q0=String(O.ort).trim(),vs=[q0].concat(q0.split(/[ ,;]+/).filter(x=>x.length>2&&!/^[0-9]+$/.test(x)),(q0.match(/[0-9]{5}/)||[]).slice(0,1)).filter((x,i,a)=>x&&a.indexOf(x)==i);let R=null;for(const v of vs){const j=await(await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(v)+'&count=1&language=de&countryCode=DE')).json();if(j.results&&j.results[0]){R=j.results[0];break}}if(!R)return WXQ?0:alert('Standort nicht gefunden. Bitte unter Mehr → Einstellungen → Objekte nur den Ortsnamen (z. B. Moers) eintragen.');O.lat=R.latitude;O.lon=R.longitude;save()}
   const ds=S.m.filter(m=>m.o==oid&&m.t=='gas').flatMap(m=>m.r.map(x=>x.d)).sort(),a=ds[0]||isoU(Date.now()-365*864e5),b=isoU(Date.now()-6*864e5);
   const j2=await(await fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+O.lat+'&longitude='+O.lon+'&start_date='+a+'&end_date='+b+'&daily=temperature_2m_mean&timezone=auto')).json(),T={};
   j2.daily.time.forEach((d,i)=>{const v=j2.daily.temperature_2m_mean[i];if(v!=null)T[d]=v});const g=wxGet();g[oid]=T;localStorage.setItem(WX,JSON.stringify(g));render();if(!WXQ)alert('Wetterdaten geladen ('+Object.keys(T).length+' Tage).')}catch(e){if(!WXQ)alert('Wetterdaten konnten nicht geladen werden (offline?).')}}
@@ -735,12 +735,12 @@ function syncMirrors(){let n=0;const t=today(),lt=(a)=>a.sort((x,y)=>x.d.localeC
   const A=lt(S.h.filter(x=>x.t=='ab'&&x.pid==p.id));if(A&&+p.cur!==+A.v){p.cur=A.v;n++}
   if(p.mid&&!S.m.find(m=>m.id==p.mid)){p.mid='';n++}});return n}
 function mirrorIssues(){const seen={},dup=[],orph=[];S.h.forEach(h=>{if(!S.p.find(p=>p.id==h.pid)){orph.push(h.id);return}const k=[h.t,h.pid,h.d,h.v].join('|');if(seen[k])dup.push(h.id);else seen[k]=1});return{dup,orph}}
-async function refreshAll(){const n=syncMirrors();norm();let b=0;try{b=autoBook()||0}catch(e){}
- let wx=0;WXQ=1;for(const o of S.o){if(o.ort){try{await wxLoad(o.id);wx++}catch(e){}}}WXQ=0;
+async function refreshData(){const n=syncMirrors();norm();let b=0;try{b=autoBook()||0}catch(e){}
+ let wx=0;WXQ=1;for(const o of S.o){if(o.ort){try{await wxLoad(o.id);if(wxGet()[o.id])wx++}catch(e){}}}WXQ=0;
  const I=mirrorIssues(),bad=I.dup.length+I.orph.length;let cl=0;
  if(bad&&confirm(I.dup.length+' doppelte und '+I.orph.length+' verwaiste Einträge im Verlauf gefunden. Jetzt bereinigen? (Rückgängig möglich)')){snap('Verlauf bereinigt');const x=new Set(I.dup.concat(I.orph));S.h=S.h.filter(h=>!x.has(h.id));cl=x.size}
  S.lr=new Date().toISOString();S.rr=[n+' Werte abgeglichen',b?b+' Zahlung(en) gebucht':'',wx?wx+' Wetterdatensatz/-sätze neu geladen':'',cl?cl+' Einträge bereinigt':(bad?bad+' Auffälligkeit(en) belassen':'')].filter(Boolean).join(' · ');save();render()}
-function rfUI(){return`<div class="c"><b>🔄 Daten aktualisieren</b><div class="mu">Gleicht alle gespiegelten Werte ab (Profil ↔ Verlauf: Arbeitspreis, Abschlag), bucht fällige Zahlungen, lädt Wetterdaten neu und findet doppelte/verwaiste Einträge. Änderungen im Verlauf werden außerdem automatisch überall übernommen.</div><button onclick="refreshAll()">Jetzt aktualisieren</button>${S.lr?`<div class="mu">Zuletzt: ${new Date(S.lr).toLocaleString('de-DE')}${S.rr?' – '+esc(S.rr):''}</div>`:''}</div>`}
+function rfUI(){return`<div class="c"><b>🔄 Daten aktualisieren</b><div class="mu">Gleicht alle gespiegelten Werte ab (Profil ↔ Verlauf: Arbeitspreis, Abschlag), bucht fällige Zahlungen, lädt Wetterdaten neu und findet doppelte/verwaiste Einträge. Änderungen im Verlauf werden außerdem automatisch überall übernommen.</div><button onclick="refreshData()">Jetzt aktualisieren</button>${S.lr?`<div class="mu">Zuletzt: ${new Date(S.lr).toLocaleString('de-DE')}${S.rr?' – '+esc(S.rr):''}</div>`:''}</div>`}
 
 let CLQ=0;const CLN={ap:'Arbeitspreis',cur:'Abschlag',gp:'Preis/Grundpreis',aw:'Abwasserpreis'};
 function clLog(id,key,old,nw){if(CLQ||!(key in CLN)||!(+old!=+nw)||(key=='cur'&&!(+old>0)))return;S.cl=(S.cl||[]).concat({id:uid(),pid:id,key,old:+old||0,v:+nw||0,ts:Date.now()}).slice(-30)}
