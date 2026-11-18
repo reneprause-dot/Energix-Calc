@@ -2,14 +2,14 @@
 
 PWA für Eigenheimbesitzer: Strom-, Gas-, Wasser- und Fixkosten erfassen, Abschläge berechnen, Verbrauch auswerten und Investitionen (Wärmepumpe, PV) durchrechnen.
 
-**Version:** 2.15.0 (Build 34) – wird in der App unter „Mehr“ angezeigt.
+**Version:** 2.16.0 (Build 35) – wird in der App unter „Mehr“ angezeigt.
 
 ## Dateien
 
 | Datei | Zweck |
 |---|---|
 | `index.html` | Die komplette App (eine Datei, kein Build nötig) |
-| `sw.js` | Service Worker (Offline-Betrieb, Cache `energix-v2.15.0-b34`) |
+| `sw.js` | Service Worker (Offline-Betrieb, Cache `energix-v2.16.0-b35`) |
 
 Beide Dateien müssen bei jedem Update gemeinsam hochgeladen werden.
 
@@ -36,6 +36,7 @@ Beide Dateien müssen bei jedem Update gemeinsam hochgeladen werden.
 ### Haus
 - Heizkosten-Prognose (Saison Oktober–April).
 - Eigenheim-Vorlagen für Fixkosten, Wartung, Rechnungen, Nebenkosten, Steuermappe (Rechnungs-Upload mit KI-Auslesung und Hinweis zur steuerlichen Absetzbarkeit).
+- **Stromverbraucher:** Geräte anlegen, kWh-Stand des Zwischensteckers eintragen, Hochrechnung auf Jahr, Kosten, CO₂ und Anteil am Gesamtverbrauch.
 - **Wärmepumpe statt Gas:** Gaskosten heute vs. WP-Stromkosten, Förderung (BEG), Eigenanteil, Amortisation, 20-Jahres-Vorteil, CO₂-Ersparnis, Diagramm.
 - **Photovoltaik:** Investition, Ertrag, Eigenverbrauch, Autarkie, Amortisation, 20-Jahres-Gewinn, Diagramm.
 - Sparrechner (Standby, Raumtemperatur, Nachtabsenkung).
@@ -60,6 +61,7 @@ Beide Dateien müssen bei jedem Update gemeinsam hochgeladen werden.
 
 ## Changelog (Auszug)
 
+- **2.16.0** – Stromverbraucher: Geräte mit Zwischenstecker-Messung, Hochrechnung auf Jahresverbrauch und -kosten
 - **2.15.0** – Selbsttest, einmalige Boni mit Datum, Warnung nach neuem Zählerstand, saisonale Gas-Hochrechnung (Gradtage), Änderungsprotokoll mit Rückgängig für Profile/Zähler/Zählerstände/Verlauf, Vertragsübersicht mit Kalender-Export
 - **2.14.x** – Abschlag in der Übersicht, Abschlag-Korrektur, Start-Fehler behoben
 - **2.10.0** – Wärmepumpen- und PV-Wirtschaftlichkeitsrechner
