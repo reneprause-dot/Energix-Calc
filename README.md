@@ -2,14 +2,14 @@
 
 PWA für Eigenheimbesitzer: Strom-, Gas-, Wasser- und Fixkosten erfassen, Abschläge berechnen, Verbrauch auswerten und Investitionen (Wärmepumpe, PV) durchrechnen.
 
-**Version:** 2.16.0 (Build 35) – wird in der App unter „Mehr“ angezeigt.
+**Version:** 2.17.0 (Build 36) – wird in der App unter „Mehr“ angezeigt.
 
 ## Dateien
 
 | Datei | Zweck |
 |---|---|
 | `index.html` | Die komplette App (eine Datei, kein Build nötig) |
-| `sw.js` | Service Worker (Offline-Betrieb, Cache `energix-v2.16.0-b35`) |
+| `sw.js` | Service Worker (Offline-Betrieb, Cache `energix-v2.17.0-b36`) |
 
 Beide Dateien müssen bei jedem Update gemeinsam hochgeladen werden.
 
@@ -61,6 +61,7 @@ Beide Dateien müssen bei jedem Update gemeinsam hochgeladen werden.
 
 ## Changelog (Auszug)
 
+- **2.17.0** – Prognose reagiert ab dem ersten Zählerstand (gewichtet mit der Schätzung in den ersten 30 Tagen), Karte „Prognose je Zählerstand“
 - **2.16.0** – Stromverbraucher: Geräte mit Zwischenstecker-Messung, Hochrechnung auf Jahresverbrauch und -kosten
 - **2.15.0** – Selbsttest, einmalige Boni mit Datum, Warnung nach neuem Zählerstand, saisonale Gas-Hochrechnung (Gradtage), Änderungsprotokoll mit Rückgängig für Profile/Zähler/Zählerstände/Verlauf, Vertragsübersicht mit Kalender-Export
 - **2.14.x** – Abschlag in der Übersicht, Abschlag-Korrektur, Start-Fehler behoben

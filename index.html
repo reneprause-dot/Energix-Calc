@@ -37,7 +37,7 @@ details summary{cursor:pointer;font-weight:600}
 <script>
 const _D=Date;let TOFF=0,TS={ok:0};
 Date=class extends _D{constructor(...a){if(a.length)super(...a);else super(_D.now()+TOFF)}static now(){return _D.now()+TOFF}};
-const VER='2.16.0',BUILD=35,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
+const VER='2.17.0',BUILD=36,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
 let S={p:[],m:[],h:[],dc:[],z:100},V='home',CM=null;
 try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
 function norm(){if(!Array.isArray(S.o)||!S.o.length)S.o=[{id:'o1',n:'Eigenheim'}];if(!S.ao||(S.ao!='all'&&!S.o.find(o=>o.id==S.ao)))S.ao=S.o[0].id;S.p.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.m.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.vb=S.vb||[];S.vb.forEach(x=>{if(!x.o)x.o=S.o[0].id})}
@@ -62,7 +62,7 @@ function calc(p){if(p.t=='internet'){const g=apAt(p,today()),cost=g*12/(+p.iv||1
 
   const m=S.m.find(m=>m.id==p.mid);let kwh=+p.est||0,src='manuell geschätzt';
   if(m){const r=rd(m);if(r.length>1){const days=(new Date(r.at(-1).d)-new Date(r[0].d))/864e5;
-    if(days>=30){kwh=periods(m).reduce((a,q)=>a+q.k,0)/days*365;src='hochgerechnet aus Zählerständen';if(p.t=='gas'&&S.sg!==0){const q=seasonKwh(m);if(q!==null&&q>kwh*.5&&q<kwh*2){kwh=q;src='saisonal hochgerechnet (Gradtage)'}}}}}
+    if(days>=30){kwh=periods(m).reduce((a,q)=>a+q.k,0)/days*365;src='hochgerechnet aus Zählerständen';if(p.t=='gas'&&S.sg!==0){const q=seasonKwh(m);if(q!==null&&q>kwh*.5&&q<kwh*2){kwh=q;src='saisonal hochgerechnet (Gradtage)'}}}else if(days>0){const ms=periods(m).reduce((a,q)=>a+q.k,0)/days*365,w=days/30;if(kwh>0){kwh=ms*w+kwh*(1-w);src='gewichtet: Schätzung und '+f(days,0)+' Tage Zählerstände'}else{kwh=ms;src='hochgerechnet aus Zählerständen'}}}}
   if(p.t=='pv'){const A=apAt(p,today()),cost=-(kwh*A/100)+(+p.gp||0)*12-bonusOf(p);return{kwh,src,cost,ab:cost/12,diff:null}}
   const W=p.t=='wasser',A=apAt(p,today()),cost=((W?kwh*(A+(+p.aw||0))+(+p.nw||0):kwh*A/100)+p.gp*12-bonusOf(p))*(1+(+p.pf||0)/100);
   return{kwh,src,cost,ab:cost/12,diff:curAb(p)?cost/12-curAb(p):null}}
@@ -284,7 +284,7 @@ function aus(){if(!S.p.length)return'<div class="c">Noch keine Profile.</div>';
  const ks=Object.keys(G).sort((a,b)=>G[b].m-G[a].m),T=ks.reduce((q,k)=>q+Math.max(0,G[k].m),0)||1;
  const e1=`<div class="c"><b>Auswertung 1 – Kosten je Zahler</b>${ks.map(k=>`<div style="margin-top:.7rem"><div class="row"><span>👤 ${esc(k)}</span><b>${f(G[k].m)} €/Monat</b></div><div class="mu">${f(G[k].m*12)} €/Jahr · ${f(G[k].m/T*100,0)} %</div><div style="height:.5rem;border-radius:.3rem;background:var(--bd)"><div style="height:100%;width:${Math.max(0,G[k].m/T*100)}%;border-radius:.3rem;background:var(--st)"></div></div></div>`).join('')}<div class="row" style="margin-top:.8rem"><span>Gesamt</span><b>${f(tot)} €/Monat</b></div></div>`;
  const e2=`<div class="c"><b>Auswertung 2 – Aufschlüsselung je Zahler</b>${ks.map(k=>`<div style="margin-top:.8rem"><b>👤 ${esc(k)}</b>${G[k].l.map(x=>`<div class="row"><span>${pic(x.p)} ${esc(x.p.n)}${x.pc<100?' ('+f(x.pc,0)+' %)':''}</span><span>${f(x.m)} €/Monat · ${f(x.m*12,0)} €/Jahr</span></div>`).join('')}</div>`).join('')}<div class="mu" style="margin-top:.6rem">Basis: aktuelle Abschläge (ohne Abschlag: berechneter Monatsanteil) der Profile</div></div>`;
- return e0+e00+bench()+co2card(mo)+rgUI()+zkUI()+prUI()+e1+e2+repUI()}
+ return e0+e00+fcUI()+bench()+co2card(mo)+rgUI()+zkUI()+prUI()+e1+e2+repUI()}
 function add(b,m){const d=new Date(b),day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+m);d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));return d}
 function nd(p){if(!p.zd)return null;const iv=+p.ri||0,b=new Date(p.zd+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);let d=b,k=0;
  if(!iv)return d<t?null:d;while(d<t&&k<1200)d=add(b,++k*iv);return d}
@@ -837,6 +837,11 @@ function vbUI(){const L=vbList().map(x=>({x,c:vbCalc(x)}));const ok=L.filter(a=>
  return`<div class="c"><b>🔌 Stromverbraucher (Zwischenstecker)</b><div class="mu">Lege ein Gerät an, stecke den Messstecker dazwischen und trag den angezeigten kWh-Stand ein. Die App rechnet auf das Jahr hoch und zeigt die Kosten mit deinem Strompreis.</div>
  ${ok.length?`<div class="row"><span>Summe gemessener Geräte</span><b>${f(tk,0)} kWh · ${f(tot)} €/Jahr</b></div>${vk>0?`<div class="row"><span>Anteil am Jahresverbrauch (${f(vk,0)} kWh)</span><b>${f(tk/vk*100,0)} %</b></div><div style="height:.5rem;background:var(--bd);border-radius:.3rem;overflow:hidden"><div style="height:100%;background:var(--st);width:${Math.min(100,tk/vk*100)}%"></div></div><div class="mu">Rest (nicht gemessen): ${f(Math.max(0,vk-tk),0)} kWh</div>`:''}`:''}${rows}
  <select id="vbp" style="margin-top:.8rem">${VBP.map((q,i)=>`<option value="${i}">${q[0]} ${q[1]}</option>`).join('')}</select><button onclick="vbAdd()">+ Gerät hinzufügen</button></div>`}
+
+function fcHist(p){const m=S.m.find(x=>x.id==p.mid);if(!m)return[];const all=rd(m),orig=m.r,o=[];try{for(let i=1;i<all.length;i++){m.r=all.slice(0,i+1);const c=calc(p);o.push({d:all[i].d,v:all[i].v,kwh:c.kwh,src:c.src,diff:c.diff,cost:c.cost})}}finally{m.r=orig}return o}
+function fcUI(){const D=d=>new Date(d+'T00:00:00').toLocaleDateString('de-DE');const cards=S.p.filter(p=>['strom','gas','wasser'].includes(p.t)&&p.mid).map(p=>{const H=fcHist(p).slice(-8);if(!H.length)return'';
+ return`<div style="margin-top:.8rem"><b>${pic(p)} ${esc(p.n)}</b>${H.map((h,i)=>{const pv=i?H[i-1]:null,b=h.diff===null?null:h.diff*12,d=pv&&pv.diff!==null&&h.diff!==null?h.diff-pv.diff:null;return{h,b,d}}).reverse().map(({h,b,d})=>`<div class="row"><span>${D(h.d)} · Stand ${f(h.v,0)}<br><small class="mu">${f(h.kwh,0)} kWh/Jahr${/gewichtet/.test(h.src)?' (gewichtet)':''}${d!==null?' · '+(d>0?'▲':'▼')+' '+f(Math.abs(d))+' €/Monat':''}</small></span><b class="${b!==null&&b>0?'up':''}">${b===null?'–':(b>0?'Nachzahlung ':'Guthaben ')+f(Math.abs(b),0)+' €'}</b></div>`).join('')}</div>`}).join('');
+ return cards?`<div class="c"><b>📈 Prognose je Zählerstand</b><div class="mu">So hat sich die Jahresbilanz (Differenz zum Soll × 12) mit jedem eingetragenen Stand entwickelt. In den ersten 30 Tagen fließen die Stände zunehmend gewichtet neben deiner Schätzung ein, danach zählen sie voll.</div>${cards}</div>`:''}
 let LOCKED=false,LKF=0,LKT=0,HID=0;
 function lkGet(){try{return JSON.parse(localStorage.getItem(LK)||'null')}catch(e){return null}}
 function secUI(){const l=lkGet();return`<div class="c"><b>🔒 App-Sperre</b><div class="mu">${l?'PIN aktiv'+(l.bio?' · Face ID/Touch ID aktiv':''):'Nicht aktiv'}. Die Sperre verdeckt die App nach 30 Sekunden im Hintergrund. Die Daten selbst sind auf dem Gerät nicht verschlüsselt, verschlüsselt wird das Backup.</div><label>${l?'Neue PIN':'PIN (4–8 Ziffern)'}</label><input id="pin1" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><label>PIN wiederholen</label><input id="pin2" type="password" inputmode="numeric" maxlength="8" autocomplete="off"><button onclick="pinSave()">PIN speichern</button>${l?(l.bio?`<button class="tg" onclick="bioOff()">Face ID aus</button>`:`<button class="tg" onclick="bioOn()">Face ID aktivieren</button>`)+`<button class="x" onclick="pinOff()">Sperre entfernen</button>`:''}</div>`}
