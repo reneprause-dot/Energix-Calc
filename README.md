@@ -2,7 +2,7 @@
 
 PWA für Eigenheimbesitzer: Strom-, Gas-, Wasser- und Fixkosten erfassen, Abschläge berechnen, Verbrauch auswerten und Investitionen (Wärmepumpe, PV) durchrechnen.
 
-**Version:** 2.17.1 (Build 37) – wird in der App unter „Mehr“ angezeigt.
+**Version:** 2.17.2 (Build 38) – wird in der App unter „Mehr“ angezeigt.
 
 ## Dateien
 
@@ -75,3 +75,6 @@ Beide Dateien müssen bei jedem Update gemeinsam hochgeladen werden.
 - Profile ohne verknüpften Zähler werden automatisch mit dem einzigen passenden Zähler verknüpft.
 - Hinweis auf der Startkarte, wenn die Prognose nur geschätzt ist (kein Zähler, nur 1 Stand, alle Stände am selben Tag) – mit Verknüpfen-Button.
 - Selbsttest meldet Zähler ohne Profil.
+
+### v2.17.2 (Build 38)
+- Hochrechnung und Prognose nutzen nur Zählerstände ab Vertragsbeginn (Profil-Feld „Vertragsbeginn“). Ältere Stände bleiben im Verlauf sichtbar.

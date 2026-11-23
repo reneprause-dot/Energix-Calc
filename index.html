@@ -37,7 +37,7 @@ details summary{cursor:pointer;font-weight:600}
 <script>
 const _D=Date;let TOFF=0,TS={ok:0};
 Date=class extends _D{constructor(...a){if(a.length)super(...a);else super(_D.now()+TOFF)}static now(){return _D.now()+TOFF}};
-const VER='2.17.1',BUILD=37,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
+const VER='2.17.2',BUILD=38,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
 let S={p:[],m:[],h:[],dc:[],z:100},V='home',CM=null;
 try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
 function norm(){if(!Array.isArray(S.o)||!S.o.length)S.o=[{id:'o1',n:'Eigenheim'}];if(!S.ao||(S.ao!='all'&&!S.o.find(o=>o.id==S.ao)))S.ao=S.o[0].id;S.p.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.m.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.vb=S.vb||[];S.vb.forEach(x=>{if(!x.o)x.o=S.o[0].id})}
@@ -60,12 +60,13 @@ function rd(m){return [...m.r].sort((a,b)=>a.d.localeCompare(b.d))}
 function fac(m){if(m.t!='gas')return 1;const p=S.p.find(p=>p.mid==m.id);return +(p&&p.bw)||10}
 function calc(p){if(p.t=='internet'){const g=apAt(p,today()),cost=g*12/(+p.iv||1)-bonusOf(p);return{kwh:0,src:'',cost,ab:cost/12,diff:null}}
 
-  const m=S.m.find(m=>m.id==p.mid);let kwh=+p.est||0,src='manuell geschätzt';
+  const m=mv(p);let kwh=+p.est||0,src='manuell geschätzt';
   if(m){const r=rd(m);if(r.length>1){const days=(new Date(r.at(-1).d)-new Date(r[0].d))/864e5;
     if(days>=30){kwh=periods(m).reduce((a,q)=>a+q.k,0)/days*365;src='hochgerechnet aus Zählerständen';if(p.t=='gas'&&S.sg!==0){const q=seasonKwh(m);if(q!==null&&q>kwh*.5&&q<kwh*2){kwh=q;src='saisonal hochgerechnet (Gradtage)'}}}else if(days>0){const ms=periods(m).reduce((a,q)=>a+q.k,0)/days*365,w=days/30;if(kwh>0){kwh=ms*w+kwh*(1-w);src='gewichtet: Schätzung und '+f(days,0)+' Tage Zählerstände'}else{kwh=ms;src='hochgerechnet aus Zählerständen'}}}}
   if(p.t=='pv'){const A=apAt(p,today()),cost=-(kwh*A/100)+(+p.gp||0)*12-bonusOf(p);return{kwh,src,cost,ab:cost/12,diff:null}}
   const W=p.t=='wasser',A=apAt(p,today()),cost=((W?kwh*(A+(+p.aw||0))+(+p.nw||0):kwh*A/100)+p.gp*12-bonusOf(p))*(1+(+p.pf||0)/100);
   return{kwh,src,cost,ab:cost/12,diff:curAb(p)?cost/12-curAb(p):null}}
+function mv(p){const m=S.m.find(x=>x.id==p.mid);if(!m||!p.vb||!/^\d{4}-\d{2}-\d{2}$/.test(p.vb))return m;const r=m.r.filter(x=>x.d>=p.vb);return r.length==m.r.length?m:Object.assign({},m,{id:m.id+'@'+p.vb,r})}
 function periods(m){const r=rd(m),o=[];for(let i=1;i<r.length;i++){const d=(new Date(r[i].d)-new Date(r[i-1].d))/864e5;
   if(d>0){const k=((r[i].ch!==undefined?r[i].ch:r[i].v)-r[i-1].v)*fac(m);o.push({d:r[i].d,s:r[i-1].d,k,pd:k/d})}}return o}
 const D={strom:['Strom',35,12,3000],gas:['Gas',10,10,15000],wasser:['Wasser',2.2,5,120],internet:['Fixkosten',0,0,0],pv:['Einspeisung',8,0,3000]};function addP(t){const d=D[t];S.p.push({id:uid(),o:curO(),t,n:d[0],an:'',ap:d[1],gp:d[2],bo:0,bw:10,aw:t=='wasser'?2.5:0,nw:0,est:d[3],cur:0,pf:0,mid:'',ve:'',kf:1,iv:1,za:'',zd:'',ri:0,rl:3,ic:t=='internet'?'💶':''});save();render()}
@@ -846,9 +847,9 @@ function fcUI(){const D=d=>new Date(d+'T00:00:00').toLocaleDateString('de-DE');c
  return cards?`<div class="c"><b>📈 Prognose je Zählerstand</b><div class="mu">So hat sich die Jahresbilanz (Differenz zum Soll × 12) mit jedem eingetragenen Stand entwickelt. In den ersten 30 Tagen fließen die Stände zunehmend gewichtet neben deiner Schätzung ein, danach zählen sie voll.</div>${cards}</div>`:''}
 
 function linkM(pid,mid){const p=S.p.find(x=>x.id==pid);if(!p)return;p.mid=mid;save();render()}
-function lnkHint(p,c){if(!/^manuell/.test(c.src)||!['strom','gas','wasser','pv'].includes(p.t))return'';const m=S.m.find(x=>x.id==p.mid);
+function lnkHint(p,c){if(!/^manuell/.test(c.src)||!['strom','gas','wasser','pv'].includes(p.t))return'';const m=mv(p);
  if(!m){const C=S.m.filter(x=>x.t==p.t&&inO(x));return C.length?`<div class="mu" style="color:var(--bad)">⚠️ Kein Zähler mit diesem Profil verknüpft – deine Zählerstände fließen nicht in die Rechnung ein.</div>${C.map(x=>`<button class="g" onclick="linkM('${p.id}','${x.id}')">Zähler „${esc(x.n||x.nr||'ohne Namen')}“ verknüpfen</button>`).join('')}`:`<div class="mu" style="color:var(--bad)">⚠️ Es gibt noch keinen Zähler für dieses Profil – lege im Tab „Zähler“ einen an.</div>`}
- const r=rd(m);if(r.length<2)return`<div class="mu" style="color:var(--bad)">ℹ️ Zähler „${esc(m.n||m.nr||'')}“ hat erst ${r.length} Stand. Ab dem zweiten Stand mit anderem Datum wird die Prognose neu berechnet.</div>`;
+ const r=rd(m);if(r.length<2)return`<div class="mu" style="color:var(--bad)">ℹ️ Zähler „${esc(m.n||m.nr||'')}“ hat ${p.vb?'seit Vertragsbeginn':'erst'} ${r.length} Stand. Ab dem zweiten Stand mit anderem Datum wird die Prognose neu berechnet.</div>`;
  return`<div class="mu" style="color:var(--bad)">ℹ️ Die Zählerstände des Zählers „${esc(m.n||m.nr||'')}“ liegen am selben Tag. Für die Hochrechnung braucht es mindestens einen Tag Abstand.</div>`}
 let LOCKED=false,LKF=0,LKT=0,HID=0;
 function lkGet(){try{return JSON.parse(localStorage.getItem(LK)||'null')}catch(e){return null}}
