@@ -2,7 +2,7 @@
 
 PWA für Eigenheimbesitzer: Strom-, Gas-, Wasser- und Fixkosten erfassen, Abschläge berechnen, Verbrauch auswerten und Investitionen (Wärmepumpe, PV) durchrechnen.
 
-**Version:** 2.17.2 (Build 38) – wird in der App unter „Mehr“ angezeigt.
+**Version:** 2.18.0 (Build 39) – wird in der App unter „Mehr“ angezeigt.
 
 ## Dateien
 
@@ -78,3 +78,6 @@ Beide Dateien müssen bei jedem Update gemeinsam hochgeladen werden.
 
 ### v2.17.2 (Build 38)
 - Hochrechnung und Prognose nutzen nur Zählerstände ab Vertragsbeginn (Profil-Feld „Vertragsbeginn“). Ältere Stände bleiben im Verlauf sichtbar.
+
+### v2.18.0 (Build 39)
+- Neues Profilfeld „Abschläge pro Jahr“ (Vattenfall: 11, sonst 12). Differenz zum Soll, Prognose Abrechnung, Abschlag-Empfehlung und Verlauf je Zählerstand rechnen damit. Bestehende Strom-/Gas-Profile mit Anbieter „Vattenfall“ werden automatisch auf 11 gesetzt.

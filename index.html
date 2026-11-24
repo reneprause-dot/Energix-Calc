@@ -37,10 +37,10 @@ details summary{cursor:pointer;font-weight:600}
 <script>
 const _D=Date;let TOFF=0,TS={ok:0};
 Date=class extends _D{constructor(...a){if(a.length)super(...a);else super(_D.now()+TOFF)}static now(){return _D.now()+TOFF}};
-const VER='2.17.2',BUILD=38,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
+const VER='2.18.0',BUILD=39,GM='gemini-2.5-flash',IC={strom:'⚡',gas:'🔥',wasser:'💧',internet:'🌐',pv:'☀️'},TN={strom:'Strom',gas:'Gas',wasser:'Wasser',internet:'Fixkosten',pv:'Einspeisung'},CL={strom:'s',gas:'g',wasser:'w',internet:'i',pv:'p'},RU={strom:'kWh',gas:'m³',wasser:'m³',pv:'kWh'},K='energix.v1',$=id=>document.getElementById(id);
 let S={p:[],m:[],h:[],dc:[],z:100},V='home',CM=null;
 try{S=Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
-function norm(){if(!Array.isArray(S.o)||!S.o.length)S.o=[{id:'o1',n:'Eigenheim'}];if(!S.ao||(S.ao!='all'&&!S.o.find(o=>o.id==S.ao)))S.ao=S.o[0].id;S.p.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.m.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.vb=S.vb||[];S.vb.forEach(x=>{if(!x.o)x.o=S.o[0].id})}
+function norm(){if(!Array.isArray(S.o)||!S.o.length)S.o=[{id:'o1',n:'Eigenheim'}];if(!S.ao||(S.ao!='all'&&!S.o.find(o=>o.id==S.ao)))S.ao=S.o[0].id;S.p.forEach(x=>{if(!x.o)x.o=S.o[0].id;if(x.na===undefined&&['strom','gas'].includes(x.t))x.na=/vattenfall/i.test(x.an||'')?11:12});S.m.forEach(x=>{if(!x.o)x.o=S.o[0].id});S.vb=S.vb||[];S.vb.forEach(x=>{if(!x.o)x.o=S.o[0].id})}
 const curO=()=>S.ao=='all'?S.o[0].id:S.ao,inO=x=>S.ao=='all'||x.o==S.ao;
 function view(fn){const P=S.p,M=S.m,H=S.h;S.p=P.filter(inO);S.m=M.filter(inO);S.h=H.filter(h=>S.p.some(p=>p.id==h.pid));try{return fn()}finally{S.p=P;S.m=M;S.h=H}}
 const save=()=>{try{syncMirrors()}catch(e){}try{localStorage.setItem(K,JSON.stringify(S))}catch(e){alert('Speichern nicht möglich')}};
@@ -55,6 +55,7 @@ function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'
 const isoU=ms=>new Date(ms).toISOString().slice(0,10),today=()=>iso(new Date());
 function zoom(d){S.z=Math.min(160,Math.max(70,S.z+d));save();document.documentElement.style.fontSize=S.z+'%'}
 function go(v){V=v;navMem();try{history.replaceState(null,'','#'+v)}catch(e){}render();scrollTo(0,0)}
+function naOf(p){const n=+p.na;return n>0&&n<=12?n:12}
 function curAb(p){const a=S.h.filter(x=>x.t=='ab'&&x.pid==p.id).sort((x,y)=>x.d.localeCompare(y.d)).at(-1);return a?a.v:+p.cur||0}
 function rd(m){return [...m.r].sort((a,b)=>a.d.localeCompare(b.d))}
 function fac(m){if(m.t!='gas')return 1;const p=S.p.find(p=>p.mid==m.id);return +(p&&p.bw)||10}
@@ -65,7 +66,7 @@ function calc(p){if(p.t=='internet'){const g=apAt(p,today()),cost=g*12/(+p.iv||1
     if(days>=30){kwh=periods(m).reduce((a,q)=>a+q.k,0)/days*365;src='hochgerechnet aus Zählerständen';if(p.t=='gas'&&S.sg!==0){const q=seasonKwh(m);if(q!==null&&q>kwh*.5&&q<kwh*2){kwh=q;src='saisonal hochgerechnet (Gradtage)'}}}else if(days>0){const ms=periods(m).reduce((a,q)=>a+q.k,0)/days*365,w=days/30;if(kwh>0){kwh=ms*w+kwh*(1-w);src='gewichtet: Schätzung und '+f(days,0)+' Tage Zählerstände'}else{kwh=ms;src='hochgerechnet aus Zählerständen'}}}}
   if(p.t=='pv'){const A=apAt(p,today()),cost=-(kwh*A/100)+(+p.gp||0)*12-bonusOf(p);return{kwh,src,cost,ab:cost/12,diff:null}}
   const W=p.t=='wasser',A=apAt(p,today()),cost=((W?kwh*(A+(+p.aw||0))+(+p.nw||0):kwh*A/100)+p.gp*12-bonusOf(p))*(1+(+p.pf||0)/100);
-  return{kwh,src,cost,ab:cost/12,diff:curAb(p)?cost/12-curAb(p):null}}
+  return{kwh,src,cost,ab:cost/12,diff:curAb(p)?cost/naOf(p)-curAb(p):null}}
 function mv(p){const m=S.m.find(x=>x.id==p.mid);if(!m||!p.vb||!/^\d{4}-\d{2}-\d{2}$/.test(p.vb))return m;const r=m.r.filter(x=>x.d>=p.vb);return r.length==m.r.length?m:Object.assign({},m,{id:m.id+'@'+p.vb,r})}
 function periods(m){const r=rd(m),o=[];for(let i=1;i<r.length;i++){const d=(new Date(r[i].d)-new Date(r[i-1].d))/864e5;
   if(d>0){const k=((r[i].ch!==undefined?r[i].ch:r[i].v)-r[i-1].v)*fac(m);o.push({d:r[i].d,s:r[i-1].d,k,pd:k/d})}}return o}
@@ -109,11 +110,11 @@ function pb(l,val,max,u){const q=val/max*100;return`<div class="row"><span>${l}<
 function bgBlock(p,c){let h='';if(+p.bz>0)h+=pb('Jahresbudget (Prognose)',c.cost,+p.bz,'€');if(+p.vz>0&&p.t!='internet'&&p.t!='pv')h+=pb('Verbrauchsziel (Prognose/Jahr)',c.kwh,+p.vz,RU[p.t]);return h}
 function perOf(p){const t=new Date();t.setHours(0,0,0,0);let e;if(p.st){e=new Date(p.st+'T00:00:00');while(e<=t)e=add(e,12)}else e=new Date(t.getFullYear()+1,0,1);return{s:add(e,-12),e}}
 function bal(p,c){const{s,e}=perOf(p),a=iso(s),b=iso(e),pays=S.h.filter(x=>x.t=='pay'&&x.pid==p.id&&x.d>=a&&x.d<b);if(!pays.length)return null;
- const paid=pays.reduce((q,x)=>q+x.v,0),ab=curAb(p)||c.ab,proj=paid+Math.max(0,12-pays.length)*ab;return{paid,n:pays.length,proj,b:c.cost-proj}}
+ const paid=pays.reduce((q,x)=>q+x.v,0),ab=curAb(p)||c.ab,proj=paid+Math.max(0,naOf(p)-pays.length)*ab;return{paid,n:pays.length,proj,b:c.cost-proj}}
 function abBlock(p,c){let h='';if(c.diff!==null)h+=`<div class="row"><span>Aktueller Abschlag</span><b>${f(curAb(p))} €</b></div><div class="row"><span>Differenz zum Soll</span><b class="${c.diff>0?'up':'dn'}">${c.diff>0?'+':''}${f(c.diff)} €/Monat</b></div>`;
  const b=p.t=='internet'?null:bal(p,c);
  if(b)h+=`<div class="row"><span>Gezahlt im Zeitraum (${b.n}×)</span><b>${f(b.paid)} €</b></div><div class="row"><span>Prognose Abrechnung</span><b class="${b.b>0?'up':'dn'}">${b.b>0?'Nachzahlung':'Guthaben'} ca. ${f(Math.abs(b.b))} €</b></div><div class="mu">Gezahlt + restliche Abschläge bis Periodenende</div>`;
- else if(c.diff!==null)h+=`<div class="row"><span>Prognose Abrechnung</span><b class="${c.diff>0?'up':'dn'}">${c.diff>0?'Nachzahlung':'Guthaben'} ca. ${f(Math.abs(c.diff*12))} €</b></div>`;
+ else if(c.diff!==null)h+=`<div class="row"><span>Prognose Abrechnung</span><b class="${c.diff>0?'up':'dn'}">${c.diff>0?'Nachzahlung':'Guthaben'} ca. ${f(Math.abs(c.diff*naOf(p)))} €</b></div>`;
  return h}
 function pay(id){const p=S.p.find(x=>x.id==id),c=calc(p),d=p.t=='internet'?apAt(p,today()):(curAb(p)||c.ab),v=prompt('Gezahlter Betrag (€)',d.toFixed(2).replace('.',','));if(v===null)return;const n=parseFloat(String(v).replace(',','.'));if(isNaN(n))return alert('Ungültiger Betrag');{const x={id:uid(),t:'pay',pid:id,d:today(),v:n,n:''};S.h.push(x);chLog({kind:'h',op:'add',hid:x.id,rec:Object.assign({},x)})}save();render()}
 function prof(){return S.p.map(p=>{if(p.t=='internet')return pi(p);if(p.t=='pv')return ppv(p);const ms=S.m.filter(m=>m.t==p.t);
@@ -124,7 +125,7 @@ function prof(){return S.p.map(p=>{if(p.t=='internet')return pi(p);if(p.t=='pv')
   ${inp('Bonus/Gutschrift (€/Jahr, jedes Jahr wiederkehrend)','p',p,'bo','text',1,'inputmode="decimal"')}${bnUI(p)}
   ${p.t=='gas'?inp('Umrechnung m³ → kWh (Brennwert × Zustandszahl)','p',p,'bw','text',1,'inputmode="decimal"'):''}
   ${inp('Geschätzter Jahresverbrauch ('+(p.t=='wasser'?'m³':'kWh')+') – falls keine Zählerstände','p',p,'est','text',1,'inputmode="decimal"')}
-  ${inp('Aktueller Abschlag (€/Monat)','p',p,'cur','text',1,'inputmode="decimal"')}${inp('Jahresbudget Kosten (€, optional)','p',p,'bz','text',1,'inputmode="decimal"')}${inp('Verbrauchsziel pro Jahr ('+(p.t=='wasser'?'m³':'kWh')+', optional)','p',p,'vz','text',1,'inputmode="decimal"')}
+  ${inp('Aktueller Abschlag (€/Monat)','p',p,'cur','text',1,'inputmode="decimal"')}${['strom','gas','wasser'].includes(p.t)?inp('Abschläge pro Jahr (Vattenfall: 11, sonst 12)','p',p,'na','text',1,'inputmode="numeric"'):''}${inp('Jahresbudget Kosten (€, optional)','p',p,'bz','text',1,'inputmode="decimal"')}${inp('Verbrauchsziel pro Jahr ('+(p.t=='wasser'?'m³':'kWh')+', optional)','p',p,'vz','text',1,'inputmode="decimal"')}
   ${zf(p)}${zfld(p)}${inp('Nächster Abrechnungsstichtag','p',p,'st','date')}${inp('Sicherheitspuffer (%)','p',p,'pf','text',1,'inputmode="decimal"')}${scf(p)}${vtr(p)}${pef(p)}${twf(p)}${wzf(p)}${kuf(p)}
   <label>Zähler</label><select onchange="upd('p','${p.id}','mid',this.value)"><option value="">– keiner –</option>${ms.map(m=>`<option value="${m.id}" ${m.id==p.mid?'selected':''}>${esc(m.n||m.nr||'Zähler')}</option>`).join('')}</select>
   <button class="x" onclick="del('p','${p.id}')">Profil löschen</button></details></div>`}).join('')
@@ -541,7 +542,7 @@ function zkEv(){const t=new Date();t.setHours(0,0,0,0);const end=add(t,12),ev=[]
  return ev.sort((a,b)=>a.d-b.d)}
 function zkUI(){const ev=zkEv();if(!ev.length)return'';const G={};ev.forEach(e=>{const k=e.d.getFullYear()*12+e.d.getMonth();(G[k]=G[k]||{d:e.d,s:0,l:[]});G[k].s+=e.a;G[k].l.push(e)});const ks=Object.keys(G),mx=Math.max(...ks.map(k=>G[k].s));
  return`<div class="c"><b>🗓️ Zahlungskalender (nächste 12 Monate)</b><div class="mu">Aus Zahlungsterminen und Wartungskosten. Der teuerste Monat ist markiert.</div>${ks.map(k=>`<details style="margin-top:.3rem"><summary>${G[k].d.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}<span style="float:right" class="${G[k].s==mx?'up':''}">${f(G[k].s)} €</span></summary>${G[k].l.map(e=>`<div class="row mu"><span>${e.ic} ${esc(e.n)} · ${e.d.toLocaleDateString('de-DE')}</span><span>${f(e.a)} €</span></div>`).join('')}</details>`).join('')}</div>`}
-function abEmp(){const rows=S.p.filter(p=>['strom','gas','wasser'].includes(p.t)).map(p=>{const c=calc(p),cur=curAb(p);if(!(cur>0)||!(c.ab>0))return'';const rec=Math.ceil(c.ab),d=rec-cur;if(Math.abs(d)<2)return'';
+function abEmp(){const rows=S.p.filter(p=>['strom','gas','wasser'].includes(p.t)).map(p=>{const c=calc(p),cur=curAb(p);if(!(cur>0)||!(c.ab>0))return'';const rec=Math.ceil(c.cost/naOf(p)),d=rec-cur;if(Math.abs(d)<2)return'';
  return`<div class="row"><span>${pic(p)} ${esc(p.n)}</span><span>${f(cur)} → <b>${f(rec)} €</b></span></div><div class="mu">${d>0?'Der Abschlag ist zu niedrig – eine Nachzahlung droht':'Der Abschlag ist höher als nötig – du zahlst im Voraus'} (${d>0?'+':''}${f(d,0)} €/Monat)</div><button class="tg" onclick="abTake('${p.id}',${rec})">Als neuen Abschlag vermerken</button>`}).join('');
  return rows?`<div class="c"><b>💡 Abschlag-Empfehlung</b>${rows}<div class="mu">Aus der Prognose der Jahreskosten inkl. Sicherheitspuffer. Die Änderung des Abschlags beantragst du beim Versorger – hier wird sie nur vermerkt.</div></div>`:''}
 function abTake(id,v){snap('Abschlag übernommen');upd('p',id,'cur',v,1);render()}
@@ -638,7 +639,7 @@ function kuShow(id){const p=S.p.find(x=>x.id==id),b=$('ku'+id);b.innerHTML=`<tex
 function kuCopy(id){const t=$('kut'+id).value;try{navigator.clipboard.writeText(t).then(()=>alert('Kopiert.'),()=>alert(t))}catch(e){alert(t)}}
 async function kuShare(id){const t=$('kut'+id).value;try{if(navigator.share)await navigator.share({title:'Kündigung',text:t});else kuCopy(id)}catch(e){}}
 function kuPdf(id){const t=$('kut'+id).value;let e=document.getElementById('rep');if(!e){e=document.createElement('div');e.id='rep';document.body.appendChild(e)}e.innerHTML='<pre style="font-family:inherit;white-space:pre-wrap;font-size:12pt">'+esc(t)+'</pre>';document.body.classList.add('rp');setTimeout(()=>{window.print();setTimeout(()=>document.body.classList.remove('rp'),1500)},150)}
-function rgExplain(p,m,A,B,V,K,fix){const a=iso(new Date(A)),b=iso(new Date(B)),pays=S.h.filter(x=>x.t=='pay'&&x.pid==p.id&&x.d>=a&&x.d<b),mon=(B-A)/864e5/30.4375,P=pays.length?pays.reduce((q,x)=>q+x.v,0):curAb(p)*mon,N=K-P;
+function rgExplain(p,m,A,B,V,K,fix){const a=iso(new Date(A)),b=iso(new Date(B)),pays=S.h.filter(x=>x.t=='pay'&&x.pid==p.id&&x.d>=a&&x.d<b),mon=(B-A)/864e5/30.4375,P=pays.length?pays.reduce((q,x)=>q+x.v,0):curAb(p)*mon*naOf(p)/12,N=K-P;
  let h=`<div class="row"><span>Gezahlte Abschläge</span><b>${f(P)} €${pays.length?'':' (geschätzt)'}</b></div><div class="row"><span>${N>0?'Nachzahlung':'Guthaben'}</span><b class="${N>0?'up':'dn'}">${f(Math.abs(N))} €</b></div>`;
  const len=B-A,A0=A-len,c0=m?consR(m,A0,A):null,V0=c0&&c0.cov/(len/864e5)>=.8?c0.k:null;
  if(V0>0){const m0=isoU((A0+A)/2),m1=isoU((A+B)/2),Kb=V0*up(p,m0)+fix,vE=(V-V0)*up(p,m0),pE=V*(up(p,m1)-up(p,m0)),oE=(K-Kb)-vE-pE,aE=Kb-P;
@@ -769,7 +770,7 @@ function bnUI(p){const L=p.bn||[];return`<div class="mu" style="margin-top:.8rem
 function bnWarn(){const w=[],t=Date.parse(today());S.p.forEach(p=>(p.bn||[]).forEach(x=>{if(!x.d||!(+x.v>0))return;const dd=Math.ceil((Date.parse(x.d)-t)/864e5);if(dd<0||dd>90)return;const D=new Date(x.d+'T00:00:00').toLocaleDateString('de-DE');w.push(`🎁 ${esc(x.n)} ${f(x.v,0)} € (${esc(p.n)}) wird am ${D} fällig – Vertrag bis dahin nicht kündigen`);const k=kd(p);if(k&&!k.missed&&k.end<new Date(x.d+'T00:00:00'))w.push(`${esc(p.n)}: Der Vertrag endet am ${k.end.toLocaleDateString('de-DE')} – vor dem Bonus-Datum. Rechtzeitig verlängern, sonst verfällt der Bonus`)}));return w}
 
 function toast(t,ms){const e=$('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(TXT);TXT=setTimeout(()=>{e.style.display='none'},ms||6000)}
-function afterReading(mid){const out=[];S.abl=S.abl||{};S.p.filter(p=>p.mid==mid&&['strom','gas','wasser'].includes(p.t)).forEach(p=>{if(!(curAb(p)>0))return;const c=calc(p);if(c.diff===null)return;const d=Math.round(c.diff*100)/100,last=S.abl[p.id];S.abl[p.id]=d;if(Math.abs(d)<2)return;if(last!==undefined&&Math.abs(last-d)<1)return;out.push(`${IC[p.t]} ${p.n}: Abschlag ${d>0?'zu niedrig':'höher als nötig'} (${d>0?'+':''}${f(d,0)} €/Monat) – ${d>0?'Nachzahlung':'Guthaben'} ca. ${f(Math.abs(d)*12,0)} €`)});
+function afterReading(mid){const out=[];S.abl=S.abl||{};S.p.filter(p=>p.mid==mid&&['strom','gas','wasser'].includes(p.t)).forEach(p=>{if(!(curAb(p)>0))return;const c=calc(p);if(c.diff===null)return;const d=Math.round(c.diff*100)/100,last=S.abl[p.id];S.abl[p.id]=d;if(Math.abs(d)<2)return;if(last!==undefined&&Math.abs(last-d)<1)return;out.push(`${IC[p.t]} ${p.n}: Abschlag ${d>0?'zu niedrig':'höher als nötig'} (${d>0?'+':''}${f(d,0)} €/Monat) – ${d>0?'Nachzahlung':'Guthaben'} ca. ${f(Math.abs(d)*naOf(p),0)} €`)});
  if(out.length){toast(out.join(' · '),9000);S.abw=(S.abw||[]).concat(out.map(t=>({t,d:today()}))).slice(-6)}save()}
 function abwClr(){S.abw=[];save();render()}
 function abwUI(){return(S.abw||[]).map(x=>`<div class="c" style="border-color:var(--st)">📊 ${esc(x.t)} <button class="x" onclick="abwClr()">OK</button></div>`).join('')}
@@ -843,7 +844,7 @@ function vbUI(){const L=vbList().map(x=>({x,c:vbCalc(x)}));const ok=L.filter(a=>
 
 function fcHist(p){const m=S.m.find(x=>x.id==p.mid);if(!m)return[];const all=rd(m),orig=m.r,o=[];try{for(let i=1;i<all.length;i++){m.r=all.slice(0,i+1);const c=calc(p);o.push({d:all[i].d,v:all[i].v,kwh:c.kwh,src:c.src,diff:c.diff,cost:c.cost})}}finally{m.r=orig}return o}
 function fcUI(){const D=d=>new Date(d+'T00:00:00').toLocaleDateString('de-DE');const cards=S.p.filter(p=>['strom','gas','wasser'].includes(p.t)&&p.mid).map(p=>{const H=fcHist(p).slice(-8);if(!H.length)return'';
- return`<div style="margin-top:.8rem"><b>${pic(p)} ${esc(p.n)}</b>${H.map((h,i)=>{const pv=i?H[i-1]:null,b=h.diff===null?null:h.diff*12,d=pv&&pv.diff!==null&&h.diff!==null?h.diff-pv.diff:null;return{h,b,d}}).reverse().map(({h,b,d})=>`<div class="row"><span>${D(h.d)} · Stand ${f(h.v,0)}<br><small class="mu">${f(h.kwh,0)} kWh/Jahr${/gewichtet/.test(h.src)?' (gewichtet)':''}${d!==null?' · '+(d>0?'▲':'▼')+' '+f(Math.abs(d))+' €/Monat':''}</small></span><b class="${b!==null&&b>0?'up':''}">${b===null?'–':(b>0?'Nachzahlung ':'Guthaben ')+f(Math.abs(b),0)+' €'}</b></div>`).join('')}</div>`}).join('');
+ return`<div style="margin-top:.8rem"><b>${pic(p)} ${esc(p.n)}</b>${H.map((h,i)=>{const pv=i?H[i-1]:null,b=h.diff===null?null:h.diff*naOf(p),d=pv&&pv.diff!==null&&h.diff!==null?h.diff-pv.diff:null;return{h,b,d}}).reverse().map(({h,b,d})=>`<div class="row"><span>${D(h.d)} · Stand ${f(h.v,0)}<br><small class="mu">${f(h.kwh,0)} kWh/Jahr${/gewichtet/.test(h.src)?' (gewichtet)':''}${d!==null?' · '+(d>0?'▲':'▼')+' '+f(Math.abs(d))+' €/Monat':''}</small></span><b class="${b!==null&&b>0?'up':''}">${b===null?'–':(b>0?'Nachzahlung ':'Guthaben ')+f(Math.abs(b),0)+' €'}</b></div>`).join('')}</div>`}).join('');
  return cards?`<div class="c"><b>📈 Prognose je Zählerstand</b><div class="mu">So hat sich die Jahresbilanz (Differenz zum Soll × 12) mit jedem eingetragenen Stand entwickelt. In den ersten 30 Tagen fließen die Stände zunehmend gewichtet neben deiner Schätzung ein, danach zählen sie voll.</div>${cards}</div>`:''}
 
 function linkM(pid,mid){const p=S.p.find(x=>x.id==pid);if(!p)return;p.mid=mid;save();render()}
